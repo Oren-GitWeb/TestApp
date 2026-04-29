@@ -1544,7 +1544,7 @@ function navigate(screen) {
   const fabLabel = document.getElementById('fab-label');
 
   document.getElementById('settings-btn').style.display  = screen === 'visits' ? '' : 'none';
-  document.getElementById('voice-visit-btn').style.display = screen === 'visits' ? '' : 'none';
+  document.getElementById('voice-visit-btn').style.display = 'none';
 
   if (screen === 'visits') {
     topbar.textContent = 'יומן עבודה';
