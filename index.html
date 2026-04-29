@@ -254,6 +254,12 @@
       outline: none;
       border-color: var(--green-light);
     }
+    .form-group input[type="date"] {
+      direction: ltr;
+      text-align: right;
+      width: 100%;
+      box-sizing: border-box;
+    }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -882,11 +888,11 @@
     </div>
 
     <button onclick="backupToEmail()" class="btn btn-primary" style="width:100%;margin-bottom:10px">
-      📧 שלח גיבוי למייל
+      📤 צור קובץ גיבוי ושתף
     </button>
 
     <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">
-      פותח את אפליקציית המייל עם הנתונים מוכנים לשליחה
+      יוצר קובץ JSON ופותח את גיליון השיתוף — בחר מייל, WhatsApp או כל אפליקציה אחרת
     </div>
 
     <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
@@ -1282,19 +1288,42 @@ function closeSettings() {
   document.getElementById('popup-settings').style.display = 'none';
 }
 
-function backupToEmail() {
+async function backupToEmail() {
   const email = document.getElementById('settings-email').value.trim();
-  if (!email) { alert('יש להזין כתובת מייל'); return; }
-  const data = {
-    exportDate: new Date().toISOString(),
-    visits,
-    customers
-  };
+  const data = { exportDate: new Date().toISOString(), visits, customers };
   const json = JSON.stringify(data, null, 2);
-  const dateStr = new Date().toLocaleDateString('he-IL').replace(/\//g, '-');
-  const subject = encodeURIComponent(`גיבוי גינני – ${dateStr}`);
-  const body = encodeURIComponent(`גיבוי נתוני אפליקציית גינני מתאריך ${dateStr}\n\nהעתק את הטקסט הבא ושמור כקובץ backup.json:\n\n${json}`);
-  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  const dateStr = new Date().toISOString().split('T')[0];
+  const fileName = `ginni-backup-${dateStr}.json`;
+  const file = new File([json], fileName, { type: 'application/json' });
+
+  // iOS share sheet — sends file directly to Mail/WhatsApp/etc
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: `גיבוי גינני – ${dateStr}`,
+        text: 'גיבוי נתוני אפליקציית גינני'
+      });
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return; // user cancelled
+    }
+  }
+
+  // fallback — download file to device
+  const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // then open mail if email provided
+  if (email) {
+    const subject = encodeURIComponent(`גיבוי גינני – ${dateStr}`);
+    const body = encodeURIComponent(`הקובץ ${fileName} הורד למכשיר שלך — צרף אותו למייל זה.`);
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  }
 }
 
 function restoreBackup(event) {
