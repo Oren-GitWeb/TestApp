@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="96" fill="#1e5c1e"/>
+
+  <!-- Ground strip -->
+  <ellipse cx="256" cy="420" rx="170" ry="22" fill="#2d7a2d"/>
+
+  <!-- Tree trunk -->
+  <rect x="232" y="290" width="48" height="130" rx="10" fill="#6d3b0f"/>
+  <!-- Trunk shading -->
+  <rect x="244" y="295" width="14" height="120" rx="6" fill="#7e4510" opacity="0.5"/>
+
+  <!-- Tree canopy – back layer -->
+  <ellipse cx="256" cy="220" rx="110" ry="95" fill="#2d7a2d"/>
+  <!-- Tree canopy – mid layer -->
+  <ellipse cx="256" cy="190" rx="88" ry="80" fill="#3a8f3a"/>
+  <!-- Tree canopy – top highlight -->
+  <ellipse cx="256" cy="160" rx="64" ry="60" fill="#4caf50"/>
+  <!-- Canopy top shine -->
+  <ellipse cx="238" cy="138" rx="28" ry="22" fill="#66bb6a" opacity="0.55"/>
+
+  <!-- Flower 1 – left foreground -->
+  <!-- stem -->
+  <rect x="113" y="355" width="8" height="62" rx="4" fill="#388e3c"/>
+  <!-- leaves -->
+  <ellipse cx="101" cy="390" rx="18" ry="9" fill="#4caf50" transform="rotate(-30 101 390)"/>
+  <ellipse cx="129" cy="382" rx="18" ry="9" fill="#4caf50" transform="rotate(30 129 382)"/>
+  <!-- petals -->
+  <ellipse cx="117" cy="338" rx="11" ry="17" fill="#e91e63" transform="rotate(0 117 355)"/>
+  <ellipse cx="117" cy="372" rx="11" ry="17" fill="#e91e63" transform="rotate(180 117 355)"/>
+  <ellipse cx="100" cy="355" rx="17" ry="11" fill="#e91e63" transform="rotate(270 117 355)"/>
+  <ellipse cx="134" cy="355" rx="17" ry="11" fill="#e91e63" transform="rotate(90 117 355)"/>
+  <ellipse cx="103" cy="341" rx="12" ry="16" fill="#f06292" transform="rotate(-45 117 355)"/>
+  <ellipse cx="131" cy="341" rx="12" ry="16" fill="#f06292" transform="rotate(45 117 355)"/>
+  <ellipse cx="103" cy="369" rx="12" ry="16" fill="#f06292" transform="rotate(45 117 355) translate(0,0)"/>
+  <ellipse cx="131" cy="369" rx="12" ry="16" fill="#f06292" transform="rotate(-45 117 355) translate(0,0)"/>
+  <!-- center -->
+  <circle cx="117" cy="355" r="16" fill="#ffeb3b"/>
+  <circle cx="117" cy="355" r="9" fill="#f9a825"/>
+
+  <!-- Flower 2 – right foreground -->
+  <!-- stem -->
+  <rect x="391" y="352" width="8" height="65" rx="4" fill="#388e3c"/>
+  <!-- leaves -->
+  <ellipse cx="379" cy="388" rx="18" ry="9" fill="#4caf50" transform="rotate(-30 379 388)"/>
+  <ellipse cx="407" cy="378" rx="18" ry="9" fill="#4caf50" transform="rotate(30 407 378)"/>
+  <!-- petals -->
+  <ellipse cx="395" cy="335" rx="11" ry="17" fill="#ff9800" transform="rotate(0 395 352)"/>
+  <ellipse cx="395" cy="369" rx="11" ry="17" fill="#ff9800" transform="rotate(180 395 352)"/>
+  <ellipse cx="378" cy="352" rx="17" ry="11" fill="#ff9800" transform="rotate(270 395 352)"/>
+  <ellipse cx="412" cy="352" rx="17" ry="11" fill="#ff9800" transform="rotate(90 395 352)"/>
+  <ellipse cx="381" cy="338" rx="12" ry="16" fill="#ffb74d" transform="rotate(-45 395 352)"/>
+  <ellipse cx="409" cy="338" rx="12" ry="16" fill="#ffb74d" transform="rotate(45 395 352)"/>
+  <!-- center -->
+  <circle cx="395" cy="352" r="16" fill="#fff176"/>
+  <circle cx="395" cy="352" r="9" fill="#f9a825"/>
+
+  <!-- Small grass tufts -->
+  <ellipse cx="175" cy="415" rx="20" ry="8" fill="#4caf50" opacity="0.7"/>
+  <ellipse cx="340" cy="418" rx="16" ry="7" fill="#4caf50" opacity="0.7"/>
+  <ellipse cx="210" cy="422" rx="12" ry="5" fill="#66bb6a" opacity="0.6"/>
+</svg>

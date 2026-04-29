@@ -1,6 +1,6 @@
 {
   "name": "גינני – יומן גינון",
-  "short_name": "גינני",
+  "short_name": "GinApp",
   "description": "אפליקציית ניהול ביקורי גינון ולקוחות",
   "start_url": "./index.html",
   "display": "standalone",
@@ -10,6 +10,12 @@
   "lang": "he",
   "dir": "rtl",
   "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
