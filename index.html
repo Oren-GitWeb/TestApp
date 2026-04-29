@@ -295,13 +295,13 @@
     .summary-tile .s-lbl { font-size: 0.62rem; color: var(--gray-3); margin-top: 1px; }
 
     /* ─── Search ─── */
-    .search-wrap { position: relative; margin-bottom: 6px; }
+    .search-wrap { position: relative; margin-bottom: 8px; }
     .search-wrap input {
       width: 100%;
-      padding: 7px 14px 7px 36px;
+      padding: 11px 14px 11px 38px;
       border: 1.5px solid var(--gray-2);
       border-radius: 10px;
-      font-size: 0.9rem;
+      font-size: 1rem;
       background: var(--white);
       direction: rtl;
     }
@@ -430,14 +430,14 @@
     .filter-row {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 5px;
-      margin-bottom: 6px;
+      gap: 6px;
+      margin-bottom: 8px;
     }
     .filter-row select {
-      padding: 5px 6px;
+      padding: 9px 8px;
       border: 1.5px solid var(--gray-2);
       border-radius: 8px;
-      font-size: 0.72rem;
+      font-size: 0.82rem;
       font-family: inherit;
       background: var(--white);
       color: var(--text);
@@ -633,7 +633,8 @@
   <div class="topbar">
     <span class="topbar-icon">🌿</span>
     <h1 id="topbar-title">ביקורים</h1>
-<button class="topbar-btn" id="topbar-action" style="display:none"></button>
+    <button class="topbar-btn" id="topbar-action" style="display:none"></button>
+    <button class="topbar-btn" onclick="openSettings()" title="הגדרות" style="font-size:1.2rem;padding:5px 8px">⚙️</button>
   </div>
 
   <!-- SCREEN: Visits -->
@@ -776,6 +777,7 @@
     </div>
     <div class="drawer-footer">
       <button class="btn btn-secondary" onclick="closeOverlay('overlay-visit')">ביטול</button>
+      <button class="btn btn-cancel" id="clear-visit-btn" onclick="clearVisitFields()" style="display:none">🗑 נקה</button>
       <button class="btn btn-primary" onclick="saveVisit()">💾 שמור ביקור</button>
     </div>
   </div>
@@ -866,6 +868,39 @@
 <input type="file" id="vcf-file-input" accept=".vcf,text/vcard,text/x-vcard" multiple style="display:none" />
 
 <!-- ═══ DRAWER: Visit Detail ═══ -->
+<!-- ═══ POPUP: Settings ═══ -->
+<div id="popup-settings" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:flex-start;justify-content:flex-end;padding-top:56px;padding-left:12px;padding-right:12px">
+  <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+    <div style="font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--green-dark)">⚙️ הגדרות</div>
+
+    <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">גיבוי נתונים</div>
+
+    <div class="form-group">
+      <label>כתובת מייל לגיבוי</label>
+      <input type="email" id="settings-email" placeholder="your@gmail.com" dir="ltr"
+        style="font-family:monospace;font-size:0.9rem" />
+    </div>
+
+    <button onclick="backupToEmail()" class="btn btn-primary" style="width:100%;margin-bottom:10px">
+      📧 שלח גיבוי למייל
+    </button>
+
+    <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">
+      פותח את אפליקציית המייל עם הנתונים מוכנים לשליחה
+    </div>
+
+    <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
+
+    <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">שחזור נתונים</div>
+    <label class="btn btn-secondary" style="width:100%;text-align:center;cursor:pointer;display:block">
+      📂 ייבא גיבוי
+      <input type="file" accept=".json" onchange="restoreBackup(event)" style="display:none" />
+    </label>
+
+    <button onclick="closeSettings()" class="btn btn-secondary" style="width:100%;margin-top:12px">סגור</button>
+  </div>
+</div>
+
 <!-- ═══ POPUP: Quick Add Customer ═══ -->
 <div id="popup-quick-customer" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
@@ -1147,8 +1182,23 @@ function openVisitForm(visitId) {
     document.getElementById('profit-preview').style.display = 'none';
   }
   updateProfitPreview();
+  // show "clear" button only for future/today visits
+  const editingVisit = visitId ? visits.find(x => x.id === visitId) : null;
+  const today = new Date().toISOString().split('T')[0];
+  const isFutureOrToday = !editingVisit || editingVisit.isFuture || editingVisit.date >= today;
+  document.getElementById('clear-visit-btn').style.display = isFutureOrToday ? '' : 'none';
   closeOverlay('overlay-visit-detail');
   openOverlay('overlay-visit');
+}
+
+function clearVisitFields() {
+  if (!confirm('לנקות את כל הנתונים הכספיים והתיאור?')) return;
+  document.getElementById('v-revenue').value = '';
+  document.getElementById('v-collected').value = '';
+  document.getElementById('v-expenses').value = '';
+  document.getElementById('v-hours').value = '';
+  document.getElementById('v-notes').value = '';
+  updateProfitPreview();
 }
 
 // auto-fill address when customer selected
@@ -1209,6 +1259,70 @@ function saveVisit() {
   closeOverlay('overlay-visit');
   renderVisits();
 }
+
+// ─── Settings & Backup ────────────────────────────────────────────────────────
+const SETTINGS_KEY = 'gardenapp_settings';
+
+function loadSettings() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch(e) { return {}; }
+}
+
+function openSettings() {
+  const s = loadSettings();
+  document.getElementById('settings-email').value = s.backupEmail || '';
+  const el = document.getElementById('popup-settings');
+  el.style.display = 'flex';
+}
+
+function closeSettings() {
+  const email = document.getElementById('settings-email').value.trim();
+  const s = loadSettings();
+  s.backupEmail = email;
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  document.getElementById('popup-settings').style.display = 'none';
+}
+
+function backupToEmail() {
+  const email = document.getElementById('settings-email').value.trim();
+  if (!email) { alert('יש להזין כתובת מייל'); return; }
+  const data = {
+    exportDate: new Date().toISOString(),
+    visits,
+    customers
+  };
+  const json = JSON.stringify(data, null, 2);
+  const dateStr = new Date().toLocaleDateString('he-IL').replace(/\//g, '-');
+  const subject = encodeURIComponent(`גיבוי גינני – ${dateStr}`);
+  const body = encodeURIComponent(`גיבוי נתוני אפליקציית גינני מתאריך ${dateStr}\n\nהעתק את הטקסט הבא ושמור כקובץ backup.json:\n\n${json}`);
+  window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+function restoreBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.visits || !data.customers) { alert('קובץ גיבוי לא תקין'); return; }
+      if (!confirm(`שחזור יחליף את כל הנתונים הקיימים.\n${data.visits.length} ביקורים, ${data.customers.length} לקוחות\nלהמשיך?`)) return;
+      visits = data.visits;
+      customers = data.customers;
+      save(VISITS_KEY, visits);
+      save(CUSTOMERS_KEY, customers);
+      closeSettings();
+      renderVisits();
+      alert('✅ הנתונים שוחזרו בהצלחה');
+    } catch(err) {
+      alert('שגיאה בקריאת הקובץ');
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('popup-settings').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('popup-settings')) closeSettings();
+});
 
 // ─── Quick Add Customer ───────────────────────────────────────────────────────
 function openQuickCustomer() {
