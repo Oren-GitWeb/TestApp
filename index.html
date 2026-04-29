@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#2d6a2d" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="גינני" />
+  <title>גינני – יומן גינון</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark: #1e5c1e;
+      --green: #2d7a2d;
+      --green-light: #4caf50;
+      --green-pale: #e8f5e9;
+      --orange: #f57c00;
+      --orange-pale: #fff3e0;
+      --red: #c62828;
+      --red-pale: #ffebee;
+      --gray-1: #f5f5f5;
+      --gray-2: #e0e0e0;
+      --gray-3: #9e9e9e;
+      --gray-4: #616161;
+      --text: #212121;
+      --white: #ffffff;
+      --radius: 12px;
+      --shadow: 0 2px 8px rgba(0,0,0,0.12);
+      --shadow-lg: 0 4px 20px rgba(0,0,0,0.18);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      background: var(--gray-1);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Layout ─── */
+    #app { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+
+    .topbar {
+      background: var(--green-dark);
+      color: var(--white);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      box-shadow: var(--shadow);
+      z-index: 10;
+    }
+    .topbar h1 { font-size: 1.15rem; font-weight: 700; flex: 1; }
+    .topbar-icon { font-size: 1.4rem; }
+    .topbar-btn {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      color: var(--white);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .topbar-btn:active { background: rgba(255,255,255,0.3); }
+
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: none;
+    }
+    .screen.active { display: block; }
+
+    .bottom-nav {
+      display: flex;
+      background: var(--white);
+      border-top: 1px solid var(--gray-2);
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 4px;
+      gap: 3px;
+      border: none;
+      background: none;
+      color: var(--gray-3);
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .nav-btn .icon { font-size: 1.4rem; }
+    .nav-btn.active { color: var(--green); font-weight: 600; }
+    .nav-btn:active { background: var(--gray-1); }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; flex: 1; }
+    .card-sub { font-size: 0.8rem; color: var(--gray-4); }
+    .card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      padding: 3px 0;
+    }
+    .card-row label { color: var(--gray-4); }
+    .card-row span { font-weight: 600; }
+
+    /* profit badge */
+    .badge {
+      display: inline-block;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .badge-green { background: var(--green-pale); color: var(--green-dark); }
+    .badge-orange { background: var(--orange-pale); color: var(--orange); }
+    .badge-red { background: var(--red-pale); color: var(--red); }
+
+    /* date chip */
+    .date-chip {
+      font-size: 0.75rem;
+      background: var(--green-pale);
+      color: var(--green-dark);
+      border-radius: 6px;
+      padding: 2px 7px;
+    }
+
+    /* icon button */
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 6px;
+      border-radius: 6px;
+      color: var(--gray-4);
+    }
+    .icon-btn:active { background: var(--gray-1); }
+    .icon-btn.del { color: var(--red); }
+
+    /* ─── FAB ─── */
+    .fab {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 72px;
+      background: var(--green);
+      color: var(--white);
+      border: none;
+      border-radius: 28px;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-lg);
+      cursor: pointer;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fab:active { background: var(--green-dark); transform: translateX(-50%) scale(0.97); }
+
+    /* ─── Modal / Drawer ─── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .drawer {
+      background: var(--white);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 92dvh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+    }
+    .drawer-handle {
+      width: 40px; height: 4px;
+      background: var(--gray-2);
+      border-radius: 4px;
+      margin: 10px auto 4px;
+      flex-shrink: 0;
+    }
+    .drawer-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      padding: 8px 16px 12px;
+      border-bottom: 1px solid var(--gray-2);
+      flex-shrink: 0;
+    }
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+    }
+    .drawer-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--gray-2);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    /* ─── Form ─── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.82rem; color: var(--gray-4); margin-bottom: 4px; font-weight: 600; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--gray-2);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--white);
+      direction: rtl;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--green-light);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* ─── Buttons ─── */
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-primary { background: var(--green); color: var(--white); }
+    .btn-primary:active { background: var(--green-dark); }
+    .btn-secondary { background: var(--gray-1); color: var(--gray-4); }
+    .btn-secondary:active { background: var(--gray-2); }
+    .btn-danger { background: var(--red-pale); color: var(--red); }
+    .btn-cancel { background: #f5f5f5; color: #757575; border: 1.5px solid #bdbdbd; }
+    .visit-row-cancelled { opacity: 0.55; }
+    .visit-row-cancelled .vr-name, .visit-row-cancelled .vr-date { text-decoration: line-through; color: #9e9e9e !important; }
+
+    /* ─── Summary totals ─── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .summary-tile {
+      background: var(--white);
+      border-radius: var(--radius);
+      padding: 6px 4px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .summary-tile .s-val { font-size: 0.95rem; font-weight: 800; color: var(--green-dark); }
+    .summary-tile .s-lbl { font-size: 0.62rem; color: var(--gray-3); margin-top: 1px; }
+
+    /* ─── Search ─── */
+    .search-wrap { position: relative; margin-bottom: 6px; }
+    .search-wrap input {
+      width: 100%;
+      padding: 7px 14px 7px 36px;
+      border: 1.5px solid var(--gray-2);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      background: var(--white);
+      direction: rtl;
+    }
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-3);
+      font-size: 1rem;
+    }
+
+    /* ─── Empty state ─── */
+    .empty {
+      text-align: center;
+      color: var(--gray-3);
+      padding: 40px 20px;
+      font-size: 0.95rem;
+    }
+    .empty .big { font-size: 3rem; display: block; margin-bottom: 10px; }
+
+    /* ─── Section header ─── */
+    .section-header {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gray-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 6px 4px 4px;
+    }
+
+    /* ─── Profit bar ─── */
+    .profit-bar-wrap { margin-top: 8px; }
+    .profit-bar-bg {
+      height: 6px;
+      background: var(--gray-2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .profit-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .profit-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--gray-3);
+      margin-top: 2px;
+    }
+
+    /* ─── Visit detail ─── */
+    .notes-block {
+      background: var(--green-pale);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ─── Visit compact row ─── */
+    .visit-row {
+      background: var(--white);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 8px 10px 8px 12px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      border-right: 4px solid var(--gray-2);
+      transition: box-shadow 0.15s;
+    }
+    .visit-row:active { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .vr-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .vr-name {
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 60%;
+    }
+    .vr-date {
+      font-size: 0.72rem;
+      color: var(--gray-3);
+      flex-shrink: 0;
+    }
+    .vr-nums {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .vr-num {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.2;
+    }
+    .vr-lbl {
+      font-size: 0.62rem;
+      font-weight: 400;
+      color: var(--gray-3);
+    }
+    .vr-badge .badge { font-size: 0.68rem; padding: 2px 7px; }
+    .vr-cs {
+      font-size: 0.68rem;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+    .section-header { margin-top: 6px; }
+
+    /* ─── Filter row ─── */
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .filter-row select {
+      padding: 5px 6px;
+      border: 1.5px solid var(--gray-2);
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      background: var(--white);
+      color: var(--text);
+      direction: rtl;
+      cursor: pointer;
+    }
+    .filter-row select.active-filter {
+      border-color: var(--green-light);
+      background: var(--green-pale);
+      color: var(--green-dark);
+      font-weight: 600;
+    }
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--green-dark);
+      color: var(--white);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .filter-chip button {
+      background: none;
+      border: none;
+      color: var(--white);
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 0 2px;
+      opacity: 0.8;
+    }
+    .filter-chip button:hover { opacity: 1; }
+
+    /* ─── Setup wizard steps ─── */
+    .setup-step-tab {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--gray-2);
+      color: var(--gray-3);
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .setup-step-tab.active   { background: var(--green);      color: var(--white); }
+    .setup-step-tab.done     { background: var(--green-dark); color: var(--white); }
+    .setup-step-line {
+      flex: 1; height: 2px;
+      background: var(--gray-2);
+      align-self: center;
+    }
+    .setup-instruction {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 12px;
+      background: var(--gray-1);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+    .setup-instruction .step-num {
+      background: var(--green-dark);
+      color: var(--white);
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .setup-instruction .path {
+      background: var(--white);
+      border: 1px solid var(--gray-2);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      display: inline-block;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+    .setup-highlight {
+      background: #fff9c4;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-weight: 700;
+    }
+    .setup-tip {
+      background: var(--orange-pale);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.8rem;
+      line-height: 1.6;
+      color: #5d4037;
+      margin-bottom: 10px;
+    }
+    .open-link-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      background: #4285F4;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      margin-bottom: 10px;
+    }
+    .open-link-btn:active { background: #2a75f3; }
+
+    /* ─── Import method buttons ─── */
+    .import-method-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: var(--white);
+      border: 1.5px solid var(--gray-2);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-family: inherit;
+      text-align: right;
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .import-method-btn:active { background: var(--green-pale); border-color: var(--green-light); }
+
+    /* ─── Mic button ─── */
+    #mic-btn, #mic-next-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--green-pale);
+      border: 1.5px solid var(--green-light);
+      color: var(--green-dark);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #mic-btn:active, #mic-next-btn:active { transform: scale(0.96); }
+    #mic-btn.recording, #mic-next-btn.recording {
+      background: var(--red-pale);
+      border-color: var(--red);
+      color: var(--red);
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(198,40,40,0.35); }
+      50%       { box-shadow: 0 0 0 6px rgba(198,40,40,0); }
+    }
+    #mic-status {
+      font-size: 0.78rem;
+      color: var(--red);
+      background: var(--red-pale);
+      border-radius: 6px;
+      padding: 5px 10px;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    /* scroll hidden */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--gray-2); border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <span class="topbar-icon">🌿</span>
+    <h1 id="topbar-title">ביקורים</h1>
+<button class="topbar-btn" id="topbar-action" style="display:none"></button>
+  </div>
+
+  <!-- SCREEN: Visits -->
+  <div class="screen active" id="screen-visits">
+    <div id="visits-summary"></div>
+    <div class="search-wrap">
+      <input type="text" id="visits-search" placeholder="חיפוש חופשי…" />
+      <span class="search-icon">🔍</span>
+    </div>
+    <div class="filter-row">
+      <select id="filter-customer"><option value="">כל הלקוחות</option></select>
+      <select id="filter-month"><option value="">כל החודשים</option></select>
+      <select id="filter-collection">
+        <option value="">כל סטטוסי גביה</option>
+        <option value="full">שולם במלואו</option>
+        <option value="partial">גביה חלקית</option>
+        <option value="none">טרם נגבה</option>
+        <option value="unknown">גביה לא צוינה</option>
+      </select>
+    </div>
+    <div id="filter-chips"></div>
+    <div id="visits-list"></div>
+  </div>
+
+  <!-- SCREEN: Customers -->
+  <div class="screen" id="screen-customers">
+    <div class="search-wrap">
+      <input type="text" id="customers-search" placeholder="חיפוש לקוח…" />
+      <span class="search-icon">🔍</span>
+    </div>
+    <div id="customers-list"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-screen="visits" onclick="navigate('visits')">
+      <span class="icon">📋</span>ביקורים
+    </button>
+    <button class="nav-btn" data-screen="customers" onclick="navigate('customers')">
+      <span class="icon">👥</span>לקוחות
+    </button>
+  </nav>
+
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab-btn">
+  <span id="fab-icon">+</span>
+  <span id="fab-label">ביקור חדש</span>
+</button>
+
+<!-- ═══ DRAWER: Visit Form ═══ -->
+<div class="overlay" id="overlay-visit">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="visit-drawer-title">ביקור חדש</div>
+    <div class="drawer-body">
+      <input type="hidden" id="v-id" />
+      <div class="form-group">
+        <label>לקוח *</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="v-customer" style="flex:1">
+            <option value="">— בחר לקוח —</option>
+          </select>
+          <button type="button" onclick="openQuickCustomer()" title="הוסף לקוח חדש" style="flex-shrink:0;background:var(--green-pale);border:1.5px solid var(--green-light);color:var(--green-dark);border-radius:50%;width:36px;height:36px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>תאריך ביקור *</label>
+        <input type="date" id="v-date" />
+      </div>
+      <div class="form-group">
+        <label>כתובת (אפשר לשנות לביקור זה)</label>
+        <input type="text" id="v-address" placeholder="רחוב, עיר" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>סכום לחיוב (₪) *</label>
+          <input type="number" id="v-revenue" placeholder="0" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>סכום שנגבה (₪)</label>
+          <input type="number" id="v-collected" placeholder="0" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>סה״כ הוצאות (₪)</label>
+          <input type="number" id="v-expenses" placeholder="0" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>שעות ביקור</label>
+          <input type="number" id="v-hours" placeholder="0" min="0" step="0.5" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+          <div id="collection-status-preview" style="font-size:0.82rem;font-weight:600;padding:10px 8px;border-radius:8px;text-align:center;display:none"></div>
+        </div>
+      </div>
+      <div id="profit-preview" style="margin-bottom:14px;display:none;" class="card" style="padding:10px">
+        <div class="card-row">
+          <label>רווח</label><span id="prev-profit"></span>
+        </div>
+        <div class="card-row">
+          <label>רווחיות</label><span id="prev-margin"></span>
+        </div>
+        <div class="profit-bar-wrap">
+          <div class="profit-bar-bg"><div class="profit-bar-fill" id="prev-bar"></div></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <label style="margin-bottom:0">מה נעשה (תיאור חופשי)</label>
+          <button type="button" id="mic-btn" onclick="toggleRecording()" title="הקלט קול">
+            🎤 <span id="mic-label">הקלט</span>
+          </button>
+        </div>
+        <div id="mic-status" style="display:none"></div>
+        <textarea id="v-notes" placeholder="תאר את העבודה שבוצעה… או לחץ הקלט"></textarea>
+      </div>
+      <div style="border-top:1px solid var(--gray-2);padding-top:12px;margin-top:4px">
+        <div style="font-size:0.85rem;font-weight:700;color:#1976d2;margin-bottom:8px">📅 קבע ביקור הבא</div>
+        <div class="form-group">
+          <label>תאריך ביקור הבא</label>
+          <input type="date" id="v-next-date" style="border-color:#90caf9" />
+          <div style="font-size:0.75rem;color:var(--gray-3);margin-top:3px">תיצור רשומה ריקה לתאריך זה (אופציונלי)</div>
+        </div>
+        <div class="form-group">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <label style="margin-bottom:0">תיאור לביקור הבא</label>
+            <button type="button" id="mic-next-btn" onclick="toggleNextRecording()" title="הקלט קול">
+              🎤 <span id="mic-next-label">הקלט</span>
+            </button>
+          </div>
+          <div id="mic-next-status" style="display:none"></div>
+          <textarea id="v-next-notes" placeholder="הוראות, עבודות מתוכננות לביקור הבא…"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn btn-secondary" onclick="closeOverlay('overlay-visit')">ביטול</button>
+      <button class="btn btn-primary" onclick="saveVisit()">💾 שמור ביקור</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DRAWER: Customer Form ═══ -->
+<div class="overlay" id="overlay-customer">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="customer-drawer-title">לקוח חדש</div>
+    <div class="drawer-body">
+      <input type="hidden" id="c-id" />
+      <div class="form-group">
+        <label>שם הלקוח *</label>
+        <input type="text" id="c-name" placeholder="שם מלא" />
+      </div>
+      <div class="form-group">
+        <label>כתובת</label>
+        <input type="text" id="c-address" placeholder="רחוב ומספר, עיר" />
+      </div>
+      <div class="form-group">
+        <label>איש קשר</label>
+        <input type="text" id="c-contact" placeholder="שם איש הקשר" />
+      </div>
+      <div class="form-group">
+        <label>מספר טלפון</label>
+        <input type="tel" id="c-phone" placeholder="05X-XXXXXXX" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>סוג ביקורים</label>
+          <select id="c-visit-type" onchange="toggleIntervalField()">
+            <option value="onetime">חד פעמי</option>
+            <option value="recurring">מחזורי</option>
+          </select>
+        </div>
+        <div class="form-group" id="c-interval-group" style="display:none">
+          <label>תדירות</label>
+          <select id="c-interval">
+            <option value="7">שבועי</option>
+            <option value="14">דו שבועי</option>
+            <option value="30">חודשי</option>
+            <option value="60">חודשיים</option>
+            <option value="180">חצי שנה</option>
+            <option value="365">שנתי</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" id="c-generate-group" style="display:none">
+        <label>צור ביקורים עתידיים עבור</label>
+        <select id="c-generate-months">
+          <option value="0">ללא יצירה אוטומטית</option>
+          <option value="1">חודש קדימה</option>
+          <option value="2">חודשיים קדימה</option>
+          <option value="3">3 חודשים קדימה</option>
+          <option value="6">חצי שנה קדימה</option>
+          <option value="12">שנה קדימה</option>
+          <option value="24">שנתיים קדימה</option>
+        </select>
+        <div style="font-size:0.73rem;color:var(--gray-3);margin-top:3px">ייצר רשומות ריקות לפי התדירות שנבחרה</div>
+      </div>
+      <div class="form-group">
+        <label>הערות</label>
+        <textarea id="c-notes" placeholder="פרטים נוספים…"></textarea>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button class="btn btn-secondary" onclick="closeOverlay('overlay-customer')">ביטול</button>
+      <button class="btn btn-primary" onclick="saveCustomer()">💾 שמור לקוח</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DRAWER: Import Contacts ═══ -->
+<div class="overlay" id="overlay-import">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="import-drawer-title">ייבוא אנשי קשר</div>
+    <div class="drawer-body" id="import-body"></div>
+    <div class="drawer-footer" id="import-footer">
+      <button class="btn btn-secondary" onclick="closeOverlay('overlay-import')">ביטול</button>
+      <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmImport()" style="display:none">✅ ייבא נבחרים</button>
+    </div>
+  </div>
+</div>
+
+<!-- hidden file input for vcf -->
+<input type="file" id="vcf-file-input" accept=".vcf,text/vcard,text/x-vcard" multiple style="display:none" />
+
+<!-- ═══ DRAWER: Visit Detail ═══ -->
+<!-- ═══ POPUP: Quick Add Customer ═══ -->
+<div id="popup-quick-customer" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+    <div style="font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--green-dark)">➕ לקוח חדש מהיר</div>
+    <div class="form-group">
+      <label>שם מלא *</label>
+      <input type="text" id="qc-name" placeholder="שם הלקוח" />
+    </div>
+    <div class="form-group">
+      <label>כתובת</label>
+      <input type="text" id="qc-address" placeholder="רחוב ומספר, עיר" />
+    </div>
+    <div class="form-group">
+      <label>טלפון</label>
+      <input type="tel" id="qc-phone" placeholder="05X-XXXXXXX" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeQuickCustomer()">ביטול</button>
+      <button class="btn btn-primary" style="flex:1" onclick="saveQuickCustomer()">💾 הוסף לקוח</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-visit-detail">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="detail-title"></div>
+    <div class="drawer-body" id="detail-body"></div>
+    <div class="drawer-footer">
+      <button class="btn btn-secondary" onclick="closeOverlay('overlay-visit-detail')">סגור</button>
+      <button class="btn btn-secondary" id="detail-edit-btn">✏️ ערוך</button>
+      <button class="btn btn-cancel" id="detail-cancel-btn">🚫 בטל</button>
+      <button class="btn btn-danger" id="detail-del-btn">🗑 מחק</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Storage ───────────────────────────────────────────────────────────────
+const VISITS_KEY    = 'gardenapp_visits';
+const CUSTOMERS_KEY = 'gardenapp_customers';
+const META_KEY      = 'gardenapp_meta';
+
+// ── Bump this number whenever the data structure changes ──────────────────────
+// Add a migration function below for each new version.
+const DATA_VERSION  = 2;
+
+function load(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function loadMeta() {
+  try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; }
+}
+function save(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+let visits    = load(VISITS_KEY);
+let customers = load(CUSTOMERS_KEY);
+
+// ─── Local DB migration ──────────────────────────────────────────────────────
+// Each entry: { version: N, up: fn(visits, customers) → { visits, customers } }
+const migrations = [
+  {
+    version: 2,
+    description: 'Add collected field to visits (null = not set)',
+    up(v, c) {
+      v = v.map(visit => ({
+        ...visit,
+        collected: ('collected' in visit) ? visit.collected : null,
+      }));
+      return { visits: v, customers: c };
+    },
+  },
+  // ── Add future migrations here ────────────────────────────────────────────
+  // {
+  //   version: 3,
+  //   description: 'Example: add tags field to customers',
+  //   up(v, c) {
+  //     c = c.map(cu => ({ ...cu, tags: cu.tags || [] }));
+  //     return { visits: v, customers: c };
+  //   },
+  // },
+];
+
+function runLocalMigrations() {
+  const meta = loadMeta();
+  const storedVersion = parseInt(meta.dataVersion || '1');
+
+  if (storedVersion >= DATA_VERSION) return; // already up to date
+
+  const pending = migrations
+    .filter(m => m.version > storedVersion)
+    .sort((a, b) => a.version - b.version);
+
+  if (pending.length === 0) {
+    localStorage.setItem(META_KEY, JSON.stringify({ ...meta, dataVersion: DATA_VERSION }));
+    return;
+  }
+
+  console.log(`[migration] running ${pending.length} migration(s) from v${storedVersion} → v${DATA_VERSION}`);
+
+  let v = visits, c = customers;
+  for (const m of pending) {
+    console.log(`[migration] v${m.version}: ${m.description}`);
+    try {
+      const result = m.up(v, c);
+      v = result.visits;
+      c = result.customers;
+    } catch (e) {
+      console.error(`[migration] v${m.version} failed:`, e);
+      break;
+    }
+  }
+
+  visits    = v;
+  customers = c;
+  localStorage.setItem(VISITS_KEY,    JSON.stringify(visits));
+  localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers));
+  localStorage.setItem(META_KEY, JSON.stringify({ ...meta, dataVersion: DATA_VERSION }));
+  console.log('[migration] complete ✓');
+}
+
+runLocalMigrations();
+
+// ─── Navigation ─────────────────────────────────────────────────────────────
+let currentScreen = 'visits';
+
+function navigate(screen) {
+  currentScreen = screen;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  document.querySelector('[data-screen="' + screen + '"]').classList.add('active');
+
+  const fab = document.getElementById('fab-btn');
+  const topbar = document.getElementById('topbar-title');
+  const fabLabel = document.getElementById('fab-label');
+
+  if (screen === 'visits') {
+    topbar.textContent = 'ביקורים';
+    fabLabel.textContent = 'ביקור חדש';
+    document.getElementById('fab-icon').textContent = '📋';
+    document.getElementById('topbar-action').style.display = 'none';
+    renderVisits();
+  } else {
+    topbar.textContent = 'לקוחות';
+    fabLabel.textContent = 'לקוח חדש';
+    document.getElementById('fab-icon').textContent = '👤';
+    const actionBtn = document.getElementById('topbar-action');
+    actionBtn.textContent = '📲 ייבא אנשי קשר';
+    actionBtn.style.display = '';
+    actionBtn.onclick = importContacts;
+    renderCustomers();
+  }
+}
+
+document.getElementById('fab-btn').addEventListener('click', () => {
+  if (currentScreen === 'visits') openVisitForm();
+  else openCustomerForm();
+});
+
+// ─── Overlay helpers ─────────────────────────────────────────────────────────
+function openOverlay(id) { document.getElementById(id).classList.add('open'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ─── Collection status ────────────────────────────────────────────────────────
+// collected: null = not set (no info), 0 = not collected, 0<x<revenue = partial, x>=revenue = full
+function collectionStatus(revenue, collected) {
+  if (collected === null || collected === undefined) return { key: 'unknown', label: 'גביה לא צוינה', bg: 'transparent', color: 'var(--gray-3)', cardBg: 'var(--white)' };
+  if (revenue <= 0) return { key: 'na', label: '', bg: 'transparent', color: '', cardBg: 'var(--white)' };
+  if (collected >= revenue) return { key: 'full',    label: '✓ שולם במלואו',  bg: '#e8f5e9', color: '#2e7d32', cardBg: 'var(--white)' };
+  if (collected > 0)        return { key: 'partial', label: '◑ גביה חלקית',   bg: '#fff3e0', color: '#e65100', cardBg: '#fff8f0' };
+  return                           { key: 'none',    label: '✗ טרם נגבה',    bg: '#fce4ec', color: '#b71c1c', cardBg: '#fff5f7' };
+}
+
+// ─── Profit calc ──────────────────────────────────────────────────────────────
+function calcProfit(revenue, expenses) {
+  const r = parseFloat(revenue) || 0;
+  const e = parseFloat(expenses) || 0;
+  const profit = r - e;
+  const margin = r > 0 ? (profit / r * 100) : 0;
+  return { revenue: r, expenses: e, profit, margin };
+}
+
+function profitBadge(margin) {
+  if (margin >= 50) return `<span class="badge badge-green">${margin.toFixed(0)}%</span>`;
+  if (margin >= 20) return `<span class="badge badge-orange">${margin.toFixed(0)}%</span>`;
+  return `<span class="badge badge-red">${margin.toFixed(0)}%</span>`;
+}
+
+function barColor(margin) {
+  if (margin >= 50) return 'var(--green-light)';
+  if (margin >= 20) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+// Live profit preview in visit form
+function updateProfitPreview() {
+  const r = parseFloat(document.getElementById('v-revenue').value) || 0;
+  const e = parseFloat(document.getElementById('v-expenses').value) || 0;
+  const col = document.getElementById('v-collected').value;
+  const collected = col === '' ? null : (parseFloat(col) || 0);
+
+  // collection status preview
+  const csp = document.getElementById('collection-status-preview');
+  if (r > 0 && collected !== null) {
+    const cs = collectionStatus(r, collected);
+    csp.style.display = 'block';
+    csp.textContent = cs.label;
+    csp.style.background = cs.bg;
+    csp.style.color = cs.color;
+  } else {
+    csp.style.display = 'none';
+  }
+
+  const wrap = document.getElementById('profit-preview');
+  if (r === 0 && e === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const { profit, margin } = calcProfit(r, e);
+  document.getElementById('prev-profit').innerHTML = `<strong style="color:${profit>=0?'var(--green-dark)':'var(--red)'}">₪${profit.toFixed(2)}</strong>`;
+  document.getElementById('prev-margin').innerHTML = profitBadge(margin);
+  const bar = document.getElementById('prev-bar');
+  bar.style.width = Math.max(0, Math.min(100, Math.abs(margin))) + '%';
+  bar.style.background = barColor(margin);
+}
+
+document.getElementById('v-revenue').addEventListener('input', updateProfitPreview);
+document.getElementById('v-expenses').addEventListener('input', updateProfitPreview);
+document.getElementById('v-collected').addEventListener('input', updateProfitPreview);
+
+// ─── Visit Form ───────────────────────────────────────────────────────────────
+function openVisitForm(visitId) {
+  // populate customer dropdown
+  const sel = document.getElementById('v-customer');
+  sel.innerHTML = '<option value="">— בחר לקוח —</option>';
+  customers.sort((a,b) => a.name.localeCompare(b.name,'he')).forEach(c => {
+    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+  });
+
+  if (visitId) {
+    const v = visits.find(x => x.id === visitId);
+    document.getElementById('visit-drawer-title').textContent = 'עריכת ביקור';
+    document.getElementById('v-id').value = v.id;
+    document.getElementById('v-customer').value = v.customerId || '';
+    document.getElementById('v-date').value = v.date;
+    document.getElementById('v-address').value = v.address || '';
+    document.getElementById('v-revenue').value = v.revenue || '';
+    document.getElementById('v-collected').value = v.collected !== null && v.collected !== undefined ? v.collected : '';
+    document.getElementById('v-expenses').value = v.expenses || '';
+    document.getElementById('v-hours').value = v.hours !== null && v.hours !== undefined ? v.hours : '';
+    document.getElementById('v-notes').value = v.notes || '';
+    document.getElementById('v-next-date').value = '';
+    document.getElementById('v-next-notes').value = v.nextNotes || '';
+    // suggest next date from customer interval
+    const cust = customers.find(x => x.id === v.customerId);
+    if (cust && cust.visitType === 'recurring' && cust.visitInterval) {
+      const d = new Date(v.date);
+      d.setDate(d.getDate() + cust.visitInterval);
+      document.getElementById('v-next-date').value = d.toISOString().split('T')[0];
+    }
+  } else {
+    document.getElementById('visit-drawer-title').textContent = 'ביקור חדש';
+    document.getElementById('v-id').value = '';
+    document.getElementById('v-customer').value = '';
+    document.getElementById('v-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('v-address').value = '';
+    document.getElementById('v-revenue').value = '';
+    document.getElementById('v-collected').value = '';
+    document.getElementById('v-expenses').value = '';
+    document.getElementById('v-hours').value = '';
+    document.getElementById('v-notes').value = '';
+    document.getElementById('v-next-date').value = '';
+    document.getElementById('v-next-notes').value = '';
+    document.getElementById('profit-preview').style.display = 'none';
+  }
+  updateProfitPreview();
+  closeOverlay('overlay-visit-detail');
+  openOverlay('overlay-visit');
+}
+
+// auto-fill address when customer selected
+document.getElementById('v-customer').addEventListener('change', function() {
+  const c = customers.find(x => x.id === this.value);
+  if (c && c.address) document.getElementById('v-address').value = c.address;
+});
+
+function saveVisit() {
+  const customerId = document.getElementById('v-customer').value;
+  const date = document.getElementById('v-date').value;
+  const revenue = document.getElementById('v-revenue').value;
+  if (!customerId || !date || !revenue) {
+    alert('יש למלא לקוח, תאריך וסכום לחיוב');
+    return;
+  }
+  const id = document.getElementById('v-id').value || uid();
+  const existing = visits.findIndex(v => v.id === id);
+  const record = {
+    id,
+    customerId,
+    date,
+    address: document.getElementById('v-address').value.trim(),
+    revenue: parseFloat(revenue) || 0,
+    expenses: parseFloat(document.getElementById('v-expenses').value) || 0,
+    collected: document.getElementById('v-collected').value === '' ? null : (parseFloat(document.getElementById('v-collected').value) || 0),
+    hours: document.getElementById('v-hours').value === '' ? null : (parseFloat(document.getElementById('v-hours').value) || 0),
+    notes: document.getElementById('v-notes').value.trim(),
+    nextNotes: document.getElementById('v-next-notes').value.trim(),
+    isFuture: false,
+    created: existing >= 0 ? visits[existing].created : Date.now(),
+    updated: Date.now()
+  };
+  if (existing >= 0) visits[existing] = record;
+  else visits.unshift(record);
+
+  // create future visit placeholder if next-date set
+  const nextDate = document.getElementById('v-next-date').value;
+  if (nextDate) {
+    const futureRecord = {
+      id: uid(),
+      customerId,
+      date: nextDate,
+      address: record.address,
+      revenue: 0,
+      expenses: 0,
+      collected: null,
+      hours: null,
+      notes: document.getElementById('v-next-notes').value.trim(),
+      isFuture: true,
+      created: Date.now(),
+      updated: Date.now()
+    };
+    visits.unshift(futureRecord);
+  }
+
+  save(VISITS_KEY, visits);
+  closeOverlay('overlay-visit');
+  renderVisits();
+}
+
+// ─── Quick Add Customer ───────────────────────────────────────────────────────
+function openQuickCustomer() {
+  document.getElementById('qc-name').value = '';
+  document.getElementById('qc-address').value = '';
+  document.getElementById('qc-phone').value = '';
+  const el = document.getElementById('popup-quick-customer');
+  el.style.display = 'flex';
+  setTimeout(() => document.getElementById('qc-name').focus(), 50);
+}
+
+function closeQuickCustomer() {
+  document.getElementById('popup-quick-customer').style.display = 'none';
+}
+
+function saveQuickCustomer() {
+  const name = document.getElementById('qc-name').value.trim();
+  if (!name) { alert('יש להזין שם לקוח'); return; }
+  const id = uid();
+  const record = {
+    id,
+    name,
+    address: document.getElementById('qc-address').value.trim(),
+    contact: '',
+    phone: document.getElementById('qc-phone').value.trim(),
+    notes: '',
+    visitType: 'onetime',
+    visitInterval: null,
+    created: Date.now()
+  };
+  customers.unshift(record);
+  save(CUSTOMERS_KEY, customers);
+  // re-populate the customer select and choose the new customer
+  populateVisitCustomers(id);
+  closeQuickCustomer();
+}
+
+function populateVisitCustomers(selectId) {
+  const sel = document.getElementById('v-customer');
+  const current = selectId || sel.value;
+  sel.innerHTML = '<option value="">— בחר לקוח —</option>' +
+    [...customers].sort((a,b) => a.name.localeCompare(b.name,'he'))
+      .map(c => `<option value="${c.id}"${c.id === current ? ' selected' : ''}>${escHtml(c.name)}</option>`)
+      .join('');
+  if (selectId) {
+    sel.value = selectId;
+    // auto-fill address
+    const c = customers.find(x => x.id === selectId);
+    if (c && c.address) document.getElementById('v-address').value = c.address;
+  }
+}
+
+// ─── Customer Form ────────────────────────────────────────────────────────────
+function toggleIntervalField() {
+  const isRecurring = document.getElementById('c-visit-type').value === 'recurring';
+  document.getElementById('c-interval-group').style.display = isRecurring ? '' : 'none';
+  document.getElementById('c-generate-group').style.display = isRecurring ? '' : 'none';
+}
+
+function openCustomerForm(customerId) {
+  if (customerId) {
+    const c = customers.find(x => x.id === customerId);
+    document.getElementById('customer-drawer-title').textContent = 'עריכת לקוח';
+    document.getElementById('c-id').value = c.id;
+    document.getElementById('c-name').value = c.name;
+    document.getElementById('c-address').value = c.address || '';
+    document.getElementById('c-contact').value = c.contact || '';
+    document.getElementById('c-phone').value = c.phone || '';
+    document.getElementById('c-notes').value = c.notes || '';
+    document.getElementById('c-visit-type').value = c.visitType || 'onetime';
+    document.getElementById('c-interval').value = c.visitInterval || '30';
+    document.getElementById('c-generate-months').value = '0';
+  } else {
+    document.getElementById('customer-drawer-title').textContent = 'לקוח חדש';
+    document.getElementById('c-id').value = '';
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-address').value = '';
+    document.getElementById('c-contact').value = '';
+    document.getElementById('c-phone').value = '';
+    document.getElementById('c-notes').value = '';
+    document.getElementById('c-visit-type').value = 'onetime';
+    document.getElementById('c-interval').value = '30';
+    document.getElementById('c-generate-months').value = '0';
+  }
+  toggleIntervalField();
+  openOverlay('overlay-customer');
+}
+
+function saveCustomer() {
+  const name = document.getElementById('c-name').value.trim();
+  if (!name) { alert('יש להזין שם לקוח'); return; }
+  const id = document.getElementById('c-id').value || uid();
+  const existing = customers.findIndex(c => c.id === id);
+  const prevType = existing >= 0 ? customers[existing].visitType : null;
+  const visitType = document.getElementById('c-visit-type').value;
+  const intervalDays = visitType === 'recurring' ? parseInt(document.getElementById('c-interval').value) : null;
+  const generateMonths = visitType === 'recurring' ? parseInt(document.getElementById('c-generate-months').value) : 0;
+
+  const record = {
+    id,
+    name,
+    address: document.getElementById('c-address').value.trim(),
+    contact: document.getElementById('c-contact').value.trim(),
+    phone: document.getElementById('c-phone').value.trim(),
+    notes: document.getElementById('c-notes').value.trim(),
+    visitType,
+    visitInterval: intervalDays,
+    created: existing >= 0 ? customers[existing].created : Date.now()
+  };
+  if (existing >= 0) customers[existing] = record;
+  else customers.unshift(record);
+  save(CUSTOMERS_KEY, customers);
+
+  // if switching away from recurring — delete all future visits for this customer
+  if (prevType === 'recurring' && visitType !== 'recurring') {
+    visits = visits.filter(v => !(v.customerId === id && v.isFuture));
+    save(VISITS_KEY, visits);
+  }
+
+  // generate future visits for the selected months range
+  if (visitType === 'recurring' && intervalDays && generateMonths > 0) {
+    // remove existing future visits for this customer first (avoid duplicates)
+    visits = visits.filter(v => !(v.customerId === id && v.isFuture));
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const endDate = new Date(today);
+    endDate.setMonth(endDate.getMonth() + generateMonths);
+    let cursor = new Date(today);
+    cursor.setDate(cursor.getDate() + intervalDays);
+    const address = record.address;
+    while (cursor <= endDate) {
+      visits.unshift({
+        id: uid(),
+        customerId: id,
+        date: cursor.toISOString().split('T')[0],
+        address,
+        revenue: 0, expenses: 0, collected: null, hours: null, notes: '',
+        isFuture: true,
+        created: Date.now(), updated: Date.now()
+      });
+      cursor = new Date(cursor);
+      cursor.setDate(cursor.getDate() + intervalDays);
+    }
+    save(VISITS_KEY, visits);
+  }
+
+  closeOverlay('overlay-customer');
+  renderCustomers();
+  renderVisits();
+}
+
+function deleteCustomer(id) {
+  const hasVisits = visits.some(v => v.customerId === id);
+  if (hasVisits && !confirm('ללקוח זה יש ביקורים מתועדים. למחוק בכל זאת?')) return;
+  customers = customers.filter(c => c.id !== id);
+  save(CUSTOMERS_KEY, customers);
+  renderCustomers();
+}
+
+// ─── Visit Detail ─────────────────────────────────────────────────────────────
+function openVisitDetail(visitId) {
+  const v = visits.find(x => x.id === visitId);
+  const c = customers.find(x => x.id === v.customerId);
+  const { profit, margin } = calcProfit(v.revenue, v.expenses);
+  const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+
+  document.getElementById('detail-title').textContent = (c ? c.name : '—') + ' · ' + formatDate(v.date);
+
+  document.getElementById('detail-body').innerHTML = `
+    ${v.cancelled ? `<div style="background:#f5f5f5;color:#757575;border-radius:8px;padding:7px 12px;font-weight:700;font-size:0.85rem;margin-bottom:10px;border:1.5px solid #bdbdbd">🚫 ביקור זה מסומן כמבוטל</div>` : ''}
+    <div class="card-row"><label>תאריך</label><span class="date-chip">${formatDate(v.date)}</span></div>
+    ${v.address ? `<div class="card-row"><label>כתובת</label><span>${v.address}</span></div>` : ''}
+    ${c && c.contact ? `<div class="card-row"><label>איש קשר</label><span>${c.contact}</span></div>` : ''}
+    ${c && c.phone ? `<div class="card-row"><label>טלפון</label><span><a href="tel:${c.phone}" style="color:var(--green-dark);text-decoration:none;">${c.phone}</a></span></div>` : ''}
+    <hr style="border:none;border-top:1px solid var(--gray-2);margin:10px 0" />
+    <div class="card-row"><label>לחיוב</label><span>₪${v.revenue.toFixed(2)}</span></div>
+    ${cs.key !== 'unknown' ? `<div class="card-row"><label>נגבה</label>
+      <span style="font-weight:700;color:${cs.color}">
+        ${cs.key === 'full' ? `₪${v.revenue.toFixed(2)}` : cs.key === 'none' ? '₪0.00' : `₪${(v.collected||0).toFixed(2)}`}
+        &nbsp;<span style="background:${cs.bg};color:${cs.color};border-radius:10px;padding:2px 8px;font-size:0.78rem">${cs.label}</span>
+      </span></div>
+      ${cs.key === 'partial' ? `<div class="card-row"><label>יתרה לגביה</label><span style="color:#e65100;font-weight:700">₪${(v.revenue-(v.collected||0)).toFixed(2)}</span></div>` : ''}` : ''}
+    <div class="card-row"><label>הוצאות</label><span>₪${v.expenses.toFixed(2)}</span></div>
+    ${v.hours !== null && v.hours !== undefined ? `<div class="card-row"><label>שעות ביקור</label><span>${v.hours} שע׳</span></div>` : ''}
+    <div class="card-row"><label>רווח נקי</label><span style="font-size:1.1rem;color:${profit>=0?'var(--green-dark)':'var(--red)'}">₪${profit.toFixed(2)}</span></div>
+    <div class="card-row"><label>רווחיות</label>${profitBadge(margin)}</div>
+    <div class="profit-bar-wrap" style="margin-bottom:14px">
+      <div class="profit-bar-bg"><div class="profit-bar-fill" style="width:${Math.max(0,Math.min(100,Math.abs(margin)))}%;background:${barColor(margin)}"></div></div>
+      <div class="profit-bar-labels"><span>0%</span><span>50%</span><span>100%</span></div>
+    </div>
+    ${v.notes ? `<div style="margin-bottom:6px;font-size:0.82rem;color:var(--gray-4);font-weight:600">מה נעשה</div><div class="notes-block">${escHtml(v.notes)}</div>` : ''}
+  `;
+
+  document.getElementById('detail-edit-btn').onclick = () => openVisitForm(visitId);
+  document.getElementById('detail-del-btn').onclick = () => deleteVisit(visitId);
+  const cancelBtn = document.getElementById('detail-cancel-btn');
+  if (v.cancelled) {
+    cancelBtn.textContent = '↩️ בטל ביטול';
+    cancelBtn.classList.remove('btn-cancel');
+    cancelBtn.classList.add('btn-secondary');
+  } else {
+    cancelBtn.textContent = '🚫 בטל ביקור';
+    cancelBtn.classList.add('btn-cancel');
+    cancelBtn.classList.remove('btn-secondary');
+  }
+  cancelBtn.onclick = () => toggleCancelVisit(visitId);
+  openOverlay('overlay-visit-detail');
+}
+
+function toggleCancelVisit(id) {
+  const v = visits.find(x => x.id === id);
+  if (!v) return;
+  v.cancelled = !v.cancelled;
+  v.updated = Date.now();
+  save(VISITS_KEY, visits);
+  closeOverlay('overlay-visit-detail');
+  renderVisits();
+}
+
+function deleteVisit(id) {
+  if (!confirm('למחוק ביקור זה?')) return;
+  visits = visits.filter(v => v.id !== id);
+  save(VISITS_KEY, visits);
+  closeOverlay('overlay-visit-detail');
+  renderVisits();
+}
+
+// ─── Render Visits ────────────────────────────────────────────────────────────
+function populateFilters() {
+  const custSel = document.getElementById('filter-customer');
+  const monthSel = document.getElementById('filter-month');
+  const prevCust = custSel.value;
+  const prevMonth = monthSel.value;
+
+  // customers that have at least one visit
+  custSel.innerHTML = '<option value="">כל הלקוחות</option>';
+  const usedIds = [...new Set(visits.map(v => v.customerId))];
+  customers
+    .filter(c => usedIds.includes(c.id))
+    .sort((a,b) => a.name.localeCompare(b.name,'he'))
+    .forEach(c => {
+      custSel.innerHTML += `<option value="${c.id}">${escHtml(c.name)}</option>`;
+    });
+  custSel.value = prevCust;
+
+  // months present in visits
+  monthSel.innerHTML = '<option value="">כל החודשים</option>';
+  const months = [...new Set(visits.map(v => v.date.substring(0,7)))].sort().reverse();
+  months.forEach(ym => {
+    monthSel.innerHTML += `<option value="${ym}">${formatMonth(ym)}</option>`;
+  });
+  monthSel.value = prevMonth;
+}
+
+function renderVisits() {
+  populateFilters();
+
+  const q               = (document.getElementById('visits-search').value || '').trim().toLowerCase();
+  const custFilter      = document.getElementById('filter-customer').value;
+  const monthFilter     = document.getElementById('filter-month').value;
+  const collFilter      = document.getElementById('filter-collection').value;
+
+  // style active filters
+  document.getElementById('filter-customer').classList.toggle('active-filter', !!custFilter);
+  document.getElementById('filter-month').classList.toggle('active-filter', !!monthFilter);
+  document.getElementById('filter-collection').classList.toggle('active-filter', !!collFilter);
+
+  const collLabels = { full: 'שולם במלואו', partial: 'גביה חלקית', none: 'טרם נגבה', unknown: 'גביה לא צוינה' };
+
+  // chips
+  const chips = [];
+  if (custFilter) {
+    const c = customers.find(x => x.id === custFilter);
+    if (c) chips.push({ label: c.name, clear: () => { document.getElementById('filter-customer').value = ''; renderVisits(); } });
+  }
+  if (monthFilter) {
+    chips.push({ label: formatMonth(monthFilter), clear: () => { document.getElementById('filter-month').value = ''; renderVisits(); } });
+  }
+  if (collFilter) {
+    chips.push({ label: collLabels[collFilter] || collFilter, clear: () => { document.getElementById('filter-collection').value = ''; renderVisits(); } });
+  }
+  if (q) {
+    chips.push({ label: `"${q}"`, clear: () => { document.getElementById('visits-search').value = ''; renderVisits(); } });
+  }
+  document.getElementById('filter-chips').innerHTML = chips.length
+    ? `<div class="filter-chips">${chips.map((ch,i) => `<span class="filter-chip">${escHtml(ch.label)}<button onclick="clearChip(${i})" title="הסר סינון">×</button></span>`).join('')}</div>`
+    : '';
+  // store for clearChip
+  window._activeChips = chips;
+
+  const sorted = [...visits].sort((a,b) => b.date.localeCompare(a.date));
+
+  const filtered = sorted.filter(v => {
+    if (custFilter && v.customerId !== custFilter) return false;
+    if (monthFilter && v.date.substring(0,7) !== monthFilter) return false;
+    if (collFilter) {
+      if (v.isFuture) return false;
+      const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+      if (cs.key !== collFilter) return false;
+    }
+    if (q) {
+      const c = customers.find(x => x.id === v.customerId);
+      const name = c ? c.name.toLowerCase() : '';
+      const addr = (v.address || '').toLowerCase();
+      if (!name.includes(q) && !addr.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Summary tiles — exclude future/cancelled from financials
+  const billable = filtered.filter(v => !v.isFuture && !v.cancelled);
+  const totalRevenue = billable.reduce((s,v) => s + v.revenue, 0);
+  const totalExpenses = billable.reduce((s,v) => s + v.expenses, 0);
+  const totalProfit = totalRevenue - totalExpenses;
+  const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+
+  document.getElementById('visits-summary').innerHTML = filtered.length === 0 ? '' : `
+    <div class="summary-grid">
+      <div class="summary-tile">
+        <div class="s-val">₪${fmt(totalRevenue)}</div>
+        <div class="s-lbl">סה״כ הכנסות</div>
+      </div>
+      <div class="summary-tile">
+        <div class="s-val" style="color:${totalProfit>=0?'var(--green-dark)':'var(--red)'}">₪${fmt(totalProfit)}</div>
+        <div class="s-lbl">סה״כ רווח</div>
+      </div>
+      <div class="summary-tile">
+        <div class="s-val">${filtered.length}</div>
+        <div class="s-lbl">ביקורים</div>
+      </div>
+      <div class="summary-tile">
+        <div class="s-val">${avgMargin.toFixed(0)}%</div>
+        <div class="s-lbl">רווחיות ממוצעת</div>
+      </div>
+    </div>
+  `;
+
+  if (filtered.length === 0) {
+    document.getElementById('visits-list').innerHTML = `
+      <div class="empty"><span class="big">🌱</span>${q ? 'לא נמצאו ביקורים' : 'עדיין אין ביקורים מתועדים'}<br><small>לחץ על הכפתור הירוק להוסיף ביקור</small></div>`;
+    return;
+  }
+
+  // Group by month
+  let html = '';
+  let lastMonth = '';
+  filtered.forEach(v => {
+    const month = v.date.substring(0,7);
+    if (month !== lastMonth) {
+      lastMonth = month;
+      html += `<div class="section-header">${formatMonth(month)}</div>`;
+    }
+    const c = customers.find(x => x.id === v.customerId);
+    if (v.cancelled) {
+      html += `
+        <div class="visit-row visit-row-cancelled" onclick="openVisitDetail('${v.id}')" style="background:#f5f5f5;border-right:4px solid #bdbdbd">
+          <div class="vr-top">
+            <span class="vr-name">${c ? escHtml(c.name) : '—'}</span>
+            <span class="vr-date">${formatDate(v.date)}</span>
+          </div>
+          <div class="vr-nums">
+            <span style="font-size:0.78rem;color:#9e9e9e;font-weight:600">🚫 מבוטל</span>
+          </div>
+        </div>`;
+    } else if (v.isFuture) {
+      html += `
+        <div class="visit-row visit-row-future" onclick="openVisitForm('${v.id}')" style="background:#e3f2fd;border-right:4px solid #1976d2;opacity:0.85">
+          <div class="vr-top">
+            <span class="vr-name" style="color:#1565c0">${c ? escHtml(c.name) : '—'}</span>
+            <span class="vr-date" style="color:#1976d2">${formatDate(v.date)}</span>
+          </div>
+          <div class="vr-nums">
+            <span style="font-size:0.78rem;color:#1976d2;font-weight:600">📅 ביקור מתוכנן</span>
+          </div>
+        </div>`;
+    } else {
+    const { profit, margin } = calcProfit(v.revenue, v.expenses);
+    const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+    const borderColor = cs.color || 'var(--gray-2)';
+    html += `
+      <div class="visit-row" onclick="openVisitDetail('${v.id}')" style="background:${cs.cardBg};border-right:4px solid ${borderColor}">
+        <div class="vr-top">
+          <span class="vr-name">${c ? escHtml(c.name) : '—'}</span>
+          <span class="vr-date">${formatDate(v.date)}</span>
+        </div>
+        <div class="vr-nums">
+          <span class="vr-num"><span class="vr-lbl">חיוב</span>₪${fmt(v.revenue)}</span>
+          <span class="vr-num"><span class="vr-lbl">הוצ׳</span>₪${fmt(v.expenses)}</span>
+          <span class="vr-num" style="color:${profit>=0?'var(--green-dark)':'var(--red)'}"><span class="vr-lbl">רווח</span>₪${fmt(profit)}</span>
+          <span class="vr-badge">${profitBadge(margin)}</span>
+          ${cs.key !== 'unknown' ? `<span class="vr-cs" style="color:${cs.color};background:${cs.bg}">${cs.label}</span>` : ''}
+        </div>
+      </div>`;
+    }
+  });
+  document.getElementById('visits-list').innerHTML = html;
+}
+
+// ─── Render Customers ─────────────────────────────────────────────────────────
+function renderCustomers() {
+  const q = (document.getElementById('customers-search').value || '').trim().toLowerCase();
+  const sorted = [...customers].sort((a,b) => a.name.localeCompare(b.name,'he'));
+  const filtered = sorted.filter(c => !q || c.name.toLowerCase().includes(q) || (c.address||'').toLowerCase().includes(q));
+
+  if (filtered.length === 0) {
+    document.getElementById('customers-list').innerHTML = `
+      <div class="empty"><span class="big">👥</span>${q ? 'לא נמצאו לקוחות' : 'עדיין אין לקוחות'}<br><small>לחץ על הכפתור הירוק להוסיף לקוח</small></div>`;
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(c => {
+    const visitCount = visits.filter(v => v.customerId === c.id).length;
+    const totalRev = visits.filter(v => v.customerId === c.id).reduce((s,v) => s+v.revenue,0);
+    html += `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">${escHtml(c.name)}</div>
+            ${c.address ? `<div class="card-sub">📍 ${escHtml(c.address)}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="icon-btn" onclick="openCustomerForm('${c.id}')">✏️</button>
+            <button class="icon-btn del" onclick="deleteCustomer('${c.id}')">🗑</button>
+          </div>
+        </div>
+        ${c.contact ? `<div class="card-row"><label>איש קשר</label><span>${escHtml(c.contact)}</span></div>` : ''}
+        ${c.phone ? `<div class="card-row"><label>טלפון</label><span><a href="tel:${c.phone}" style="color:var(--green-dark);text-decoration:none;">${c.phone} 📞</a></span></div>` : ''}
+        <div class="card-row"><label>ביקורים</label><span>${visitCount}</span></div>
+        ${totalRev > 0 ? `<div class="card-row"><label>סה״כ הכנסות</label><span>₪${fmt(totalRev)}</span></div>` : ''}
+      </div>`;
+  });
+  document.getElementById('customers-list').innerHTML = html;
+}
+
+// ─── Search listeners ─────────────────────────────────────────────────────────
+function clearChip(i) { window._activeChips[i].clear(); }
+
+document.getElementById('visits-search').addEventListener('input', renderVisits);
+document.getElementById('filter-customer').addEventListener('change', renderVisits);
+document.getElementById('filter-month').addEventListener('change', renderVisits);
+document.getElementById('filter-collection').addEventListener('change', renderVisits);
+document.getElementById('customers-search').addEventListener('input', renderCustomers);
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function formatMonth(ym) {
+  const [y,m] = ym.split('-');
+  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return `${months[parseInt(m,10)-1]} ${y}`;
+}
+
+function fmt(n) {
+  return n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+// ─── Import Contacts ─────────────────────────────────────────────────────────
+let pendingImports = [];
+const hasNativePicker = () => 'contacts' in navigator && 'ContactsManager' in window;
+
+function importContacts() {
+  // Show method-choice screen inside the drawer
+  document.getElementById('import-drawer-title').textContent = 'ייבוא אנשי קשר';
+  document.getElementById('import-confirm-btn').style.display = 'none';
+
+  let html = `<p style="font-size:0.88rem;color:var(--gray-4);margin-bottom:16px;line-height:1.6">
+    בחר כיצד לייבא:</p>`;
+
+  if (hasNativePicker()) {
+    html += `
+      <button class="import-method-btn" onclick="importNative()">
+        <span style="font-size:1.8rem">📱</span>
+        <div>
+          <div style="font-weight:700">בחר מאנשי קשר</div>
+          <div style="font-size:0.78rem;color:var(--gray-3)">ישירות מספר הטלפון (Android)</div>
+        </div>
+      </button>`;
+  }
+
+  html += `
+    <button class="import-method-btn" onclick="document.getElementById('vcf-file-input').click()">
+      <span style="font-size:1.8rem">📄</span>
+      <div>
+        <div style="font-weight:700">ייבא קובץ .vcf</div>
+        <div style="font-size:0.78rem;color:var(--gray-3)">iPhone / Android / מחשב</div>
+      </div>
+    </button>
+    <div style="margin-top:14px;padding:12px;background:var(--green-pale);border-radius:10px;font-size:0.8rem;color:var(--green-dark);line-height:1.7">
+      <strong>כיצד לייצא מאייפון?</strong><br>
+      אפליקציית Contacts ← בחר איש קשר ← Share Contact ← שמור כ-vcf<br>
+      לכל אנשי הקשר: Settings ← [שם] ← iCloud ← Export All Contacts
+    </div>`;
+
+  document.getElementById('import-body').innerHTML = html;
+  openOverlay('overlay-import');
+}
+
+async function importNative() {
+  try {
+    const available = await navigator.contacts.getProperties();
+    const toRequest = ['name','tel','address','email'].filter(p => available.includes(p));
+    const selected = await navigator.contacts.select(toRequest, { multiple: true });
+    if (!selected || selected.length === 0) return;
+    const mapped = selected.map(c => {
+      const name = (c.name && c.name[0]) ? c.name[0].trim() : '';
+      if (!name) return null;
+      const phone = (c.tel && c.tel[0]) ? c.tel[0].trim() : '';
+      let address = '';
+      if (c.address && c.address[0]) {
+        const a = c.address[0];
+        address = [a.streetAddress, a.city, a.region, a.country].filter(Boolean).join(', ');
+      }
+      const email = (c.email && c.email[0]) ? c.email[0].trim() : '';
+      return buildCandidate(name, phone, address, email);
+    }).filter(Boolean);
+    showImportPreview(mapped);
+  } catch (e) {
+    if (e.name !== 'AbortError') alert('שגיאה: ' + e.message);
+  }
+}
+
+// vcf file input handler
+document.getElementById('vcf-file-input').addEventListener('change', async function() {
+  const files = Array.from(this.files);
+  if (!files.length) return;
+  this.value = '';
+  let allText = '';
+  for (const f of files) allText += '\n' + await f.text();
+  const parsed = parseVcf(allText);
+  if (!parsed.length) { alert('לא נמצאו אנשי קשר בקובץ'); return; }
+  showImportPreview(parsed);
+});
+
+function parseVcf(text) {
+  // unfold RFC 6350 line continuations
+  text = text.replace(/\r\n[ \t]/g, '').replace(/\r/g, '');
+  const cards = text.split(/BEGIN:VCARD/i).slice(1);
+  const results = [];
+  cards.forEach(card => {
+    const get = (re) => { const m = card.match(re); return m ? m[1].trim() : ''; };
+    // FN (full name) preferred, fallback N
+    let name = get(/^FN[^:]*:(.*)/im);
+    if (!name) {
+      const n = get(/^N[^:]*:(.*)/im);
+      if (n) {
+        const parts = n.split(';');
+        name = [parts[1], parts[0]].filter(Boolean).join(' ').trim();
+      }
+    }
+    // decode quoted-printable for Hebrew names
+    name = decodeQP(name);
+    if (!name) return;
+
+    // TEL — first non-fax number
+    let phone = '';
+    const telLines = [...card.matchAll(/^TEL[^:]*:(.*)/gim)];
+    for (const t of telLines) {
+      const raw = t[0].toUpperCase();
+      if (raw.includes('FAX')) continue;
+      phone = t[1].trim();
+      break;
+    }
+
+    // ADR
+    let address = '';
+    const adrM = card.match(/^ADR[^:]*:(.*)/im);
+    if (adrM) {
+      const parts = adrM[1].split(';').map(s => decodeQP(s.trim())).filter(Boolean);
+      // vCard ADR: POBox;Extended;Street;City;Region;PostalCode;Country
+      address = [parts[2], parts[3], parts[4], parts[6]].filter(Boolean).join(', ');
+    }
+
+    // EMAIL
+    const email = get(/^EMAIL[^:]*:(.*)/im);
+
+    results.push(buildCandidate(name, phone, address, email));
+  });
+  return results.filter(Boolean);
+}
+
+function decodeQP(str) {
+  if (!str || !str.includes('=')) return str;
+  try {
+    // quoted-printable to bytes then UTF-8 decode
+    const bytes = str.replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h,16)));
+    return decodeURIComponent(escape(bytes));
+  } catch { return str; }
+}
+
+function buildCandidate(name, phone, address, email) {
+  const alreadyExists = customers.some(cu =>
+    cu.name.trim().toLowerCase() === name.toLowerCase() ||
+    (phone && cu.phone && cu.phone.replace(/\D/g,'') === phone.replace(/\D/g,''))
+  );
+  return { name, phone, address, email, alreadyExists, selected: !alreadyExists };
+}
+
+function showImportPreview(candidates) {
+  pendingImports = candidates;
+  document.getElementById('import-drawer-title').textContent = 'בחר לקוחות לייבוא';
+  document.getElementById('import-confirm-btn').style.display = '';
+  renderImportPreview();
+  openOverlay('overlay-import');
+}
+
+function renderImportPreview() {
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:0.83rem;color:var(--gray-4)">נמצאו <strong>${pendingImports.length}</strong> אנשי קשר</span>
+      <div style="display:flex;gap:8px">
+        <button onclick="selectAllImports(true)" style="font-size:0.75rem;padding:4px 8px;border:1px solid var(--gray-2);border-radius:6px;background:var(--white);cursor:pointer">בחר הכל</button>
+        <button onclick="selectAllImports(false)" style="font-size:0.75rem;padding:4px 8px;border:1px solid var(--gray-2);border-radius:6px;background:var(--white);cursor:pointer">בטל הכל</button>
+      </div>
+    </div>
+    <div id="import-count-note" style="font-size:0.83rem;color:var(--green-dark);margin-bottom:10px;font-weight:600"></div>`;
+
+  pendingImports.forEach((c, i) => {
+    const dupBadge = c.alreadyExists ? `<span class="badge badge-orange" style="font-size:0.7rem">קיים</span>` : '';
+    html += `
+      <div class="card" style="padding:10px;margin-bottom:8px">
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+          <input type="checkbox" ${c.selected ? 'checked' : ''}
+            onchange="toggleImportItem(${i}, this.checked)"
+            style="width:18px;height:18px;margin-top:2px;accent-color:var(--green);flex-shrink:0" />
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:0.95rem">${escHtml(c.name)} ${dupBadge}</div>
+            ${c.phone   ? `<div style="font-size:0.82rem;color:var(--gray-4)">📞 ${escHtml(c.phone)}</div>` : ''}
+            ${c.address ? `<div style="font-size:0.82rem;color:var(--gray-4)">📍 ${escHtml(c.address)}</div>` : ''}
+            ${c.email   ? `<div style="font-size:0.82rem;color:var(--gray-4)">✉️ ${escHtml(c.email)}</div>` : ''}
+          </div>
+        </label>
+      </div>`;
+  });
+
+  document.getElementById('import-body').innerHTML = html;
+  updateImportCount();
+}
+
+function selectAllImports(val) {
+  pendingImports.forEach(c => c.selected = val);
+  renderImportPreview();
+}
+
+function toggleImportItem(idx, checked) {
+  pendingImports[idx].selected = checked;
+  updateImportCount();
+}
+
+function updateImportCount() {
+  const n = pendingImports.filter(c => c.selected).length;
+  const note = document.getElementById('import-count-note');
+  if (note) note.textContent = n + ' לקוחות ייובאו';
+  const btn = document.getElementById('import-confirm-btn');
+  if (btn) btn.disabled = n === 0;
+}
+
+function confirmImport() {
+  const toAdd = pendingImports.filter(c => c.selected);
+  toAdd.forEach(c => {
+    const existingIdx = customers.findIndex(cu =>
+      cu.name.trim().toLowerCase() === c.name.toLowerCase() ||
+      (c.phone && cu.phone && cu.phone.replace(/\D/g,'') === c.phone.replace(/\D/g,''))
+    );
+    if (existingIdx >= 0) {
+      const ex = customers[existingIdx];
+      if (!ex.phone && c.phone) ex.phone = c.phone;
+      if (!ex.address && c.address) ex.address = c.address;
+      customers[existingIdx] = ex;
+    } else {
+      customers.unshift({ id: uid(), name: c.name, phone: c.phone, address: c.address,
+        contact: '', notes: c.email ? 'אימייל: ' + c.email : '', created: Date.now() });
+    }
+  });
+  save(CUSTOMERS_KEY, customers);
+  closeOverlay('overlay-import');
+  renderCustomers();
+  const msg = toAdd.length === 1 ? 'לקוח אחד יובא בהצלחה' : `${toAdd.length} לקוחות יובאו בהצלחה`;
+  setTimeout(() => alert('✅ ' + msg), 150);
+}
+
+// ─── Voice Recording ─────────────────────────────────────────────────────────
+let recognition = null;
+let isRecording = false;
+let isNextRecording = false;
+let nextRecognition = null;
+
+function toggleRecording() {
+  if (isRecording) stopRecording(); else startRecording('v-notes', 'mic-btn', 'mic-label', 'mic-status');
+}
+function toggleNextRecording() {
+  if (isNextRecording) stopNextRecording(); else startRecording('v-next-notes', 'mic-next-btn', 'mic-next-label', 'mic-next-status', true);
+}
+
+function startRecording(textareaId, btnId, labelId, statusId, isNext) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showMicStatusById(statusId, 'הדפדפן לא תומך בזיהוי קול — השתמש ב-Chrome', true);
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  if (isNext) { isNextRecording = true; nextRecognition = rec; }
+  else         { isRecording = true;     recognition = rec; }
+
+  const btn = document.getElementById(btnId);
+  btn.classList.add('recording');
+  document.getElementById(labelId).textContent = 'ממתין…';
+  showMicStatusById(statusId, '⏳ מבקש הרשאת מיקרופון…');
+
+  rec.lang = 'he-IL';
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  const textarea = document.getElementById(textareaId);
+  // capture current text at start of this recording session
+  let baseText = textarea.value;
+
+  recognition.onstart = () => {
+    document.getElementById(labelId).textContent = 'עצור';
+    showMicStatusById(statusId, '🔴 מקשיב… דבר בעברית');
+  };
+
+  rec.onresult = (e) => {
+    let finalChunk = '';
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalChunk += e.results[i][0].transcript;
+      else                       interim    += e.results[i][0].transcript;
+    }
+    if (finalChunk) {
+      const sep = baseText.trim() ? ' ' : '';
+      baseText = baseText.trim() + sep + finalChunk.trim();
+      textarea.value = baseText + ' ';
+    }
+    if (interim) showMicStatusById(statusId, '🔴 ' + interim);
+  };
+
+  rec.onerror = (e) => {
+    if (isNext) stopNextRecording(); else stopRecording();
+    const msgs = {
+      'not-allowed':
+        '🎤 גישה למיקרופון נדחתה\n\nכיצד לאפשר:\n• Chrome: לחץ על סמל המנעול בשורת הכתובת ← מיקרופון ← אפשר\n• iPhone: הגדרות ← Safari ← מיקרופון ← אפשר',
+      'no-speech':          null,
+      'network':            '⚠️ זיהוי קול דורש חיבור לאינטרנט.',
+      'audio-capture':      '⚠️ לא נמצא מיקרופון במכשיר.',
+      'service-not-allowed':'⚠️ הדפדפן חסם את שירות הקול. נסה Chrome עדכני.',
+    };
+    const msg = msgs[e.error];
+    if (msg === null) return;
+    if (msg) alert(msg); else showMicStatusById(statusId, 'שגיאה: ' + e.error, true);
+  };
+
+  rec.onend = () => {
+    const still = isNext ? isNextRecording : isRecording;
+    if (still) {
+      try { rec.start(); } catch(e) { if (isNext) stopNextRecording(); else stopRecording(); }
+    }
+  };
+
+  try {
+    rec.start();
+  } catch(e) {
+    showMicStatusById(statusId, 'לא ניתן להפעיל הקלטה: ' + e.message, true);
+    if (isNext) stopNextRecording(); else stopRecording();
+  }
+}
+
+function stopRecording() {
+  isRecording = false;
+  if (recognition) {
+    recognition.onend = null;
+    try { recognition.stop(); } catch(e) {}
+    recognition = null;
+  }
+  const btn = document.getElementById('mic-btn');
+  if (btn) {
+    btn.classList.remove('recording');
+    document.getElementById('mic-label').textContent = 'הקלט';
+  }
+  hideMicStatusById('mic-status');
+}
+
+function stopNextRecording() {
+  isNextRecording = false;
+  if (nextRecognition) {
+    nextRecognition.onend = null;
+    try { nextRecognition.stop(); } catch(e) {}
+    nextRecognition = null;
+  }
+  const btn = document.getElementById('mic-next-btn');
+  if (btn) {
+    btn.classList.remove('recording');
+    document.getElementById('mic-next-label').textContent = 'הקלט';
+  }
+  hideMicStatusById('mic-next-status');
+}
+
+function showMicStatus(msg, isError) { showMicStatusById('mic-status', msg, isError); }
+function showMicStatusById(id, msg, isError) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.color = isError ? 'var(--red)' : 'var(--green-dark)';
+  el.style.background = isError ? 'var(--red-pale)' : 'var(--green-pale)';
+  if (isError) setTimeout(() => hideMicStatusById(id), 4000);
+}
+
+function hideMicStatus() { hideMicStatusById('mic-status'); }
+function hideMicStatusById(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+// stop recording when drawer closes
+document.getElementById('overlay-visit').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('overlay-visit')) { stopRecording(); stopNextRecording(); }
+});
+document.querySelector('#overlay-visit .btn-secondary').addEventListener('click', () => { stopRecording(); stopNextRecording(); });
+
+document.getElementById('popup-quick-customer').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('popup-quick-customer')) closeQuickCustomer();
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+renderVisits();
+</script>
+</body>
+</html>
