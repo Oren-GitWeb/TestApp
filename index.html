@@ -260,6 +260,12 @@
       width: 100%;
       box-sizing: border-box;
     }
+    /* date fields in visit form — 30% smaller */
+    #v-date, #v-next-date {
+      padding: 7px 8px;
+      font-size: 0.67rem;
+      max-width: 72%;
+    }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
@@ -679,6 +685,9 @@
     <button class="nav-btn active" data-screen="visits" onclick="navigate('visits')">
       <span class="icon">📋</span>ביקורים
     </button>
+    <button class="nav-btn" id="nav-reports-btn" onclick="openReport()">
+      <span class="icon">📊</span>דוחות
+    </button>
     <button class="nav-btn" data-screen="customers" onclick="navigate('customers')">
       <span class="icon">👥</span>לקוחות
     </button>
@@ -890,12 +899,13 @@
         style="font-family:monospace;font-size:0.9rem" />
     </div>
 
-    <button onclick="backupToEmail()" class="btn btn-primary" style="width:100%;margin-bottom:10px">
-      📤 צור קובץ גיבוי ושתף
-    </button>
-
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <button onclick="backupByEmail()" class="btn btn-primary" style="flex:1">📧 שלח במייל</button>
+      <button onclick="backupByWhatsapp()" class="btn btn-secondary" style="flex:1;background:#e7f7e7;border-color:#4caf50;color:#2e7d32">💬 WhatsApp</button>
+    </div>
     <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">
-      יוצר קובץ JSON ופותח את גיליון השיתוף — בחר מייל, WhatsApp או כל אפליקציה אחרת
+      מייל — מוריד קובץ ופותח מייל עם נמען מוכן לצירוף<br>
+      WhatsApp — שולח קובץ ישירות לשיחה
     </div>
 
     <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
@@ -905,6 +915,19 @@
       📂 ייבא גיבוי
       <input type="file" accept=".json" onchange="restoreBackup(event)" style="display:none" />
     </label>
+
+    <hr style="border:none;border-top:1px solid var(--gray-2);margin:16px 0 12px" />
+
+    <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">כלי פיתוח</div>
+    <button onclick="loadDemoData()" class="btn btn-secondary" style="width:100%;margin-bottom:6px">🌱 טען נתוני הדגמה</button>
+    <button onclick="deleteDemoData()" class="btn btn-danger" style="width:100%;margin-bottom:6px">🗑 מחק נתוני הדגמה</button>
+    <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:12px">מוסיף / מוחק לקוחות וביקורים לדוגמה בלבד</div>
+
+    <div id="changelog-section" style="display:none">
+      <hr style="border:none;border-top:1px solid var(--gray-2);margin:0 0 12px" />
+      <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">היסטוריית גרסאות</div>
+      <div id="changelog-list" style="max-height:160px;overflow-y:auto;font-size:0.75rem;color:var(--text)"></div>
+    </div>
 
     <button onclick="closeSettings()" class="btn btn-secondary" style="width:100%;margin-top:12px">סגור</button>
   </div>
@@ -947,9 +970,34 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: Report ═══ -->
+<div id="popup-report" style="display:none;position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,0.5);flex-direction:column">
+  <div style="background:#fff;flex:1;display:flex;flex-direction:column;height:100dvh">
+    <div style="background:var(--green-dark);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <span style="font-size:1rem;font-weight:700;flex:1">📊 דוח סיכום ביקורים</span>
+      <button onclick="closeReport()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;font-size:0.88rem;cursor:pointer;font-family:inherit">✕ סגור</button>
+    </div>
+    <div id="report-preview" style="flex:1;overflow-y:auto;padding:14px;font-size:0.85rem"></div>
+    <div style="padding:10px 12px;border-top:1px solid var(--gray-2);display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0">
+      <button onclick="exportReportPDF()" class="btn btn-secondary" style="padding:10px 6px;font-size:0.82rem">🖨 PDF / הדפסה</button>
+      <button onclick="exportReportExcel()" class="btn btn-secondary" style="padding:10px 6px;font-size:0.82rem">📊 ייצוא Excel</button>
+      <button onclick="reportByEmail()" class="btn btn-secondary" style="padding:10px 6px;font-size:0.82rem">📧 שלח במייל</button>
+      <button onclick="reportByWhatsapp()" class="btn btn-secondary" style="padding:10px 6px;font-size:0.82rem;background:#e7f7e7;border-color:#4caf50;color:#2e7d32">💬 WhatsApp</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.001';
+const APP_VERSION   = '01.01.006';
+const CHANGELOG = [
+  { v: '01.01.006', date: '2026-04-29', notes: ['כפתור "מחק נתוני הדגמה" בהגדרות'] },
+  { v: '01.01.005', date: '2026-04-29', notes: ['כפתור דוחות בנווט התחתון', 'דוח סיכום לפי פילטרים נוכחיים', 'ייצוא לאקסל (CSV) ו-PDF', 'שליחת דוח במייל ו-WhatsApp', 'הקטנת שדות תאריך בטופס ביקור 30%', 'הסתרת היסטוריית גרסאות בהגדרות'] },
+  { v: '01.01.004', date: '2026-04-29', notes: ['כפתור "טען נתוני הדגמה" בהגדרות', 'הוספת 4 לקוחות ו-10 ביקורים לדוגמה (כולל עתידיים ומבוטל)'] },
+  { v: '01.01.003', date: '2026-04-29', notes: ['פיצול כפתור גיבוי למייל ו-WhatsApp', 'מייל — מוריד קובץ ופותח נמען מוכן', 'WhatsApp — שולח קובץ JSON ישירות'] },
+  { v: '01.01.002', date: '2026-04-29', notes: ['הוספת מספר גרסה בהגדרות', 'גיבוי: שיתוף קובץ JSON במקום הדבקת טקסט'] },
+  { v: '01.01.001', date: '2026-04-29', notes: ['כפתור הגדרות ⚙️ ב-topbar', 'גיבוי נתונים למייל / ייבוא גיבוי', 'תיקון יישור שדות תאריך ב-iOS', 'הגדלת שדות חיפוש ופילטרים', 'כפתור נקה נתונים בטופס ביקור (עתידי/נוכחי בלבד)'] },
+];
 const VISITS_KEY    = 'gardenapp_visits';
 const CUSTOMERS_KEY = 'gardenapp_customers';
 const META_KEY      = 'gardenapp_meta';
@@ -1281,6 +1329,15 @@ function openSettings() {
   const s = loadSettings();
   document.getElementById('settings-email').value = s.backupEmail || '';
   document.getElementById('version-label').textContent = 'v' + APP_VERSION;
+  document.getElementById('changelog-list').innerHTML = CHANGELOG.map(entry => `
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-weight:700;color:var(--green-dark);font-family:monospace">v${entry.v}</span>
+        <span style="color:var(--gray-3);font-size:0.7rem">${entry.date}</span>
+      </div>
+      ${entry.notes.map(n => `<div style="padding-right:8px;color:var(--gray-4);line-height:1.5">· ${n}</div>`).join('')}
+    </div>
+  `).join('');
   const el = document.getElementById('popup-settings');
   el.style.display = 'flex';
 }
@@ -1293,42 +1350,106 @@ function closeSettings() {
   document.getElementById('popup-settings').style.display = 'none';
 }
 
-async function backupToEmail() {
-  const email = document.getElementById('settings-email').value.trim();
+function loadDemoData() {
+  if (!confirm('להוסיף נתוני הדגמה? הנתונים הקיימים לא יימחקו.')) return;
+
+  const demoCustomers = [
+    { id: 'demo-c1', name: 'משפחת לוי', address: 'רחוב הדקל 12, רמת גן', contact: 'דוד לוי', phone: '054-1234567', notes: 'גינה גדולה, כלב בחצר', visitType: 'recurring', visitInterval: 30, created: Date.now() },
+    { id: 'demo-c2', name: 'שרה כהן', address: 'שד\' הנשיא 7, הרצליה', contact: 'שרה', phone: '052-9876543', notes: 'מעדיפה ביקורים בבוקר', visitType: 'recurring', visitInterval: 14, created: Date.now() },
+    { id: 'demo-c3', name: 'בית ספר אורים', address: 'רחוב החינוך 3, פתח תקוה', contact: 'יוסי מנהל', phone: '03-5551234', notes: 'גינה ציבורית גדולה, 3 שעות עבודה', visitType: 'recurring', visitInterval: 7, created: Date.now() },
+    { id: 'demo-c4', name: 'וילה רוזנברג', address: 'שכונת הכרמל 45, חיפה', contact: 'מרים', phone: '050-7778899', notes: 'בריכה + גינה, עצי פרי', visitType: 'onetime', visitInterval: null, created: Date.now() },
+  ];
+
+  const today = new Date();
+  const d = (offsetDays) => {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() + offsetDays);
+    return dt.toISOString().split('T')[0];
+  };
+
+  const demoVisits = [
+    { id: 'demo-v1',  customerId: 'demo-c1', date: d(-2),  address: 'רחוב הדקל 12, רמת גן',     revenue: 450, expenses: 80,  collected: 450, hours: 3,   notes: 'גיזום עצי תאנה ולימון, דישון דשא, ניקוי ערוגות פרחים', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v2',  customerId: 'demo-c2', date: d(-5),  address: 'שד\' הנשיא 7, הרצליה',     revenue: 320, expenses: 40,  collected: 320, hours: 2,   notes: 'עדכון גינה, גיזום שיח שושנים, השקיה ידנית', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v3',  customerId: 'demo-c3', date: d(-7),  address: 'רחוב החינוך 3, פתח תקוה',  revenue: 600, expenses: 120, collected: 300, hours: 4,   notes: 'כיסוח מדשאה, ניקוי שבילים, נטיעת פרחי עונה', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v4',  customerId: 'demo-c1', date: d(-32), address: 'רחוב הדקל 12, רמת גן',     revenue: 450, expenses: 90,  collected: 450, hours: 3,   notes: 'טיפול שוטף, הדברה נמלים, החלפת עציצים', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v5',  customerId: 'demo-c2', date: d(-19), address: 'שד\' הנשיא 7, הרצליה',     revenue: 320, expenses: 50,  collected: 0,   hours: 2,   notes: 'גיזום וציחצוח, תמיכת ורדים', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v6',  customerId: 'demo-c4', date: d(-10), address: 'שכונת הכרמל 45, חיפה',     revenue: 900, expenses: 200, collected: 900, hours: 6,   notes: 'ניקוי בריכה, גיזום דקלים, ריסוס מזיקים, החלפת אדמה בערוגות', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v7',  customerId: 'demo-c3', date: d(-1),  address: 'רחוב החינוך 3, פתח תקוה',  revenue: 600, expenses: 100, collected: 600, hours: 4,   notes: 'כיסוח שבועי + ניקוי', isFuture: false, cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v8',  customerId: 'demo-c1', date: d(28),  address: 'רחוב הדקל 12, רמת גן',     revenue: 0,   expenses: 0,   collected: null, hours: null, notes: 'טיפול חודשי קרוב', isFuture: true,  cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v9',  customerId: 'demo-c2', date: d(9),   address: 'שד\' הנשיא 7, הרצליה',     revenue: 0,   expenses: 0,   collected: null, hours: null, notes: 'גיזום דו שבועי', isFuture: true,  cancelled: false, created: Date.now(), updated: Date.now() },
+    { id: 'demo-v10', customerId: 'demo-c3', date: d(6),   address: 'רחוב החינוך 3, פתח תקוה',  revenue: 0,   expenses: 0,   collected: null, hours: null, notes: '',           isFuture: false, cancelled: true,  created: Date.now(), updated: Date.now() },
+  ];
+
+  // add only if IDs don't already exist
+  demoCustomers.forEach(c => { if (!customers.find(x => x.id === c.id)) customers.unshift(c); });
+  demoVisits.forEach(v => { if (!visits.find(x => x.id === v.id)) visits.unshift(v); });
+  save(CUSTOMERS_KEY, customers);
+  save(VISITS_KEY, visits);
+  closeSettings();
+  renderVisits();
+  alert('✅ נתוני הדגמה נוספו');
+}
+
+function deleteDemoData() {
+  const demoVisitIds    = ['demo-v1','demo-v2','demo-v3','demo-v4','demo-v5','demo-v6','demo-v7','demo-v8','demo-v9','demo-v10'];
+  const demoCustomerIds = ['demo-c1','demo-c2','demo-c3','demo-c4'];
+  const vCount = visits.filter(v => demoVisitIds.includes(v.id)).length;
+  const cCount = customers.filter(c => demoCustomerIds.includes(c.id)).length;
+  if (vCount === 0 && cCount === 0) { alert('לא נמצאו נתוני הדגמה למחיקה'); return; }
+  if (!confirm(`למחוק ${vCount} ביקורי הדגמה ו-${cCount} לקוחות הדגמה?`)) return;
+  visits    = visits.filter(v => !demoVisitIds.includes(v.id));
+  customers = customers.filter(c => !demoCustomerIds.includes(c.id));
+  save(VISITS_KEY, visits);
+  save(CUSTOMERS_KEY, customers);
+  closeSettings();
+  renderVisits();
+  alert('✅ נתוני ההדגמה נמחקו');
+}
+
+function makeBackupFile() {
   const data = { exportDate: new Date().toISOString(), visits, customers };
   const json = JSON.stringify(data, null, 2);
   const dateStr = new Date().toISOString().split('T')[0];
   const fileName = `ginni-backup-${dateStr}.json`;
-  const file = new File([json], fileName, { type: 'application/json' });
+  return { json, fileName, dateStr };
+}
 
-  // iOS share sheet — sends file directly to Mail/WhatsApp/etc
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: `גיבוי גינני – ${dateStr}`,
-        text: 'גיבוי נתוני אפליקציית גינני'
-      });
-      return;
-    } catch(e) {
-      if (e.name === 'AbortError') return; // user cancelled
-    }
-  }
-
-  // fallback — download file to device
+function downloadBackupFile(json, fileName) {
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
-  // then open mail if email provided
-  if (email) {
-    const subject = encodeURIComponent(`גיבוי גינני – ${dateStr}`);
-    const body = encodeURIComponent(`הקובץ ${fileName} הורד למכשיר שלך — צרף אותו למייל זה.`);
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+function backupByEmail() {
+  const email = document.getElementById('settings-email').value.trim();
+  const { json, fileName, dateStr } = makeBackupFile();
+  // download the file first
+  downloadBackupFile(json, fileName);
+  // open mail with pre-filled recipient
+  const subject = encodeURIComponent(`גיבוי גינני – ${dateStr}`);
+  const body = encodeURIComponent(`הקובץ ${fileName} הורד למכשיר — צרף אותו למייל זה.`);
+  const to = email ? email : '';
+  setTimeout(() => {
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  }, 600);
+}
+
+async function backupByWhatsapp() {
+  const { json, fileName, dateStr } = makeBackupFile();
+  const file = new File([json], fileName, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: `גיבוי גינני – ${dateStr}` });
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+    }
   }
+  // fallback — just download
+  downloadBackupFile(json, fileName);
 }
 
 function restoreBackup(event) {
@@ -1582,6 +1703,260 @@ function deleteVisit(id) {
   save(VISITS_KEY, visits);
   closeOverlay('overlay-visit-detail');
   renderVisits();
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+function getReportData() {
+  const q           = (document.getElementById('visits-search').value || '').trim().toLowerCase();
+  const custFilter  = document.getElementById('filter-customer').value;
+  const monthFilter = document.getElementById('filter-month').value;
+  const collFilter  = document.getElementById('filter-collection').value;
+  const sorted = [...visits].sort((a,b) => b.date.localeCompare(a.date));
+  return sorted.filter(v => {
+    if (custFilter && v.customerId !== custFilter) return false;
+    if (monthFilter && v.date.substring(0,7) !== monthFilter) return false;
+    if (collFilter) {
+      if (v.isFuture) return false;
+      const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+      if (cs.key !== collFilter) return false;
+    }
+    if (q) {
+      const c = customers.find(x => x.id === v.customerId);
+      const name = c ? c.name.toLowerCase() : '';
+      const addr = (v.address || '').toLowerCase();
+      if (!name.includes(q) && !addr.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function buildReportDesc() {
+  const custFilter  = document.getElementById('filter-customer').value;
+  const monthFilter = document.getElementById('filter-month').value;
+  const collFilter  = document.getElementById('filter-collection').value;
+  const q           = (document.getElementById('visits-search').value || '').trim();
+  const parts = [];
+  if (custFilter) { const c = customers.find(x => x.id === custFilter); if (c) parts.push('לקוח: ' + c.name); }
+  if (monthFilter) parts.push('חודש: ' + formatMonth(monthFilter));
+  if (collFilter) { const labels = { full: 'שולם במלואו', partial: 'גביה חלקית', none: 'טרם נגבה', unknown: 'לא צוינה' }; parts.push('גביה: ' + (labels[collFilter] || collFilter)); }
+  if (q) parts.push('חיפוש: "' + q + '"');
+  return parts.length ? parts.join(' | ') : 'כל הביקורים';
+}
+
+function openReport() {
+  const filtered = getReportData();
+  const billable  = filtered.filter(v => !v.isFuture && !v.cancelled);
+  const totalRevenue  = billable.reduce((s,v) => s + v.revenue, 0);
+  const totalExpenses = billable.reduce((s,v) => s + v.expenses, 0);
+  const totalProfit   = totalRevenue - totalExpenses;
+  const totalHours    = billable.reduce((s,v) => s + (v.hours || 0), 0);
+  const totalCollected= billable.reduce((s,v) => s + (v.collected || 0), 0);
+  const avgMargin     = totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0;
+  const desc = buildReportDesc();
+
+  let html = `
+    <div style="font-size:0.78rem;color:var(--gray-3);margin-bottom:10px">סינון: <strong style="color:var(--green-dark)">${escHtml(desc)}</strong></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px">
+      ${tile('₪' + fmt(totalRevenue), 'סה״כ לחיוב')}
+      ${tile('₪' + fmt(totalCollected), 'סה״כ נגבה')}
+      ${tile('₪' + fmt(totalProfit), 'סה״כ רווח', totalProfit < 0 ? 'var(--red)' : 'var(--green-dark)')}
+      ${tile(filtered.length + '', 'ביקורים')}
+      ${tile(billable.length + '', 'ביקורים לחיוב')}
+      ${tile(totalHours > 0 ? totalHours + ' שע׳' : '—', 'סה״כ שעות')}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.78rem">
+      <thead>
+        <tr style="background:var(--green-pale);color:var(--green-dark)">
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--green-light)">תאריך</th>
+          <th style="padding:6px 8px;text-align:right;border-bottom:2px solid var(--green-light)">לקוח</th>
+          <th style="padding:6px 4px;text-align:left;border-bottom:2px solid var(--green-light)">לחיוב</th>
+          <th style="padding:6px 4px;text-align:left;border-bottom:2px solid var(--green-light)">נגבה</th>
+          <th style="padding:6px 4px;text-align:left;border-bottom:2px solid var(--green-light)">הוצ׳</th>
+          <th style="padding:6px 4px;text-align:left;border-bottom:2px solid var(--green-light)">רווח</th>
+          <th style="padding:6px 4px;text-align:left;border-bottom:2px solid var(--green-light)">שע׳</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  filtered.forEach((v, i) => {
+    const c = customers.find(x => x.id === v.customerId);
+    const { profit } = calcProfit(v.revenue, v.expenses);
+    const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+    const rowBg = v.cancelled ? '#f5f5f5' : v.isFuture ? '#e3f2fd' : (i % 2 === 0 ? '#fff' : '#fafafa');
+    const tag = v.cancelled ? ' 🚫' : v.isFuture ? ' 📅' : '';
+    html += `
+        <tr style="background:${rowBg}">
+          <td style="padding:5px 8px;border-bottom:1px solid #f0f0f0;white-space:nowrap">${formatDate(v.date)}${tag}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid #f0f0f0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c ? escHtml(c.name) : '—'}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #f0f0f0;text-align:left">${v.revenue > 0 ? '₪'+fmt(v.revenue) : '—'}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #f0f0f0;text-align:left;color:${cs.color || 'inherit'}">${v.collected !== null && v.collected !== undefined && !v.isFuture ? '₪'+fmt(v.collected) : '—'}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #f0f0f0;text-align:left">${v.expenses > 0 ? '₪'+fmt(v.expenses) : '—'}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #f0f0f0;text-align:left;color:${profit >= 0 ? 'var(--green-dark)' : 'var(--red)'}">${v.revenue > 0 ? '₪'+fmt(profit) : '—'}</td>
+          <td style="padding:5px 4px;border-bottom:1px solid #f0f0f0;text-align:left">${v.hours != null ? v.hours : '—'}</td>
+        </tr>`;
+  });
+
+  if (filtered.length === 0) {
+    html += `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--gray-3)">אין ביקורים לפי הסינון הנוכחי</td></tr>`;
+  }
+
+  html += `</tbody></table>`;
+  document.getElementById('report-preview').innerHTML = html;
+  document.getElementById('popup-report').style.display = 'flex';
+}
+
+function tile(val, lbl, color) {
+  return `<div style="background:var(--white);border-radius:10px;padding:8px 4px;text-align:center;box-shadow:var(--shadow)">
+    <div style="font-size:0.95rem;font-weight:800;color:${color || 'var(--green-dark)'}"> ${val}</div>
+    <div style="font-size:0.62rem;color:var(--gray-3);margin-top:1px">${lbl}</div>
+  </div>`;
+}
+
+function closeReport() {
+  document.getElementById('popup-report').style.display = 'none';
+}
+
+function getReportTitle() {
+  const desc = buildReportDesc();
+  const dateStr = new Date().toISOString().split('T')[0];
+  return `דוח גינני – ${desc} – ${dateStr}`;
+}
+
+function exportReportExcel() {
+  const filtered = getReportData();
+  const desc = buildReportDesc();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const BOM = '﻿';
+  const headers = ['תאריך', 'לקוח', 'כתובת', 'סכום לחיוב', 'נגבה', 'הוצאות', 'רווח', 'שעות', 'סטטוס גביה', 'סוג'];
+  const rows = filtered.map(v => {
+    const c = customers.find(x => x.id === v.customerId);
+    const { profit } = calcProfit(v.revenue, v.expenses);
+    const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+    const type = v.cancelled ? 'מבוטל' : v.isFuture ? 'מתוכנן' : 'בוצע';
+    return [
+      formatDate(v.date),
+      c ? c.name : '—',
+      v.address || '',
+      v.revenue || 0,
+      v.collected !== null && v.collected !== undefined ? v.collected : '',
+      v.expenses || 0,
+      v.revenue > 0 ? profit.toFixed(2) : '',
+      v.hours !== null && v.hours !== undefined ? v.hours : '',
+      cs.label || '',
+      type
+    ].map(x => `"${String(x).replace(/"/g, '""')}"`).join(',');
+  });
+  const csv = BOM + [headers.join(','), ...rows].join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ginni-report-${dateStr}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportReportPDF() {
+  const filtered = getReportData();
+  const desc = buildReportDesc();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const billable = filtered.filter(v => !v.isFuture && !v.cancelled);
+  const totalRevenue  = billable.reduce((s,v) => s + v.revenue, 0);
+  const totalExpenses = billable.reduce((s,v) => s + v.expenses, 0);
+  const totalProfit   = totalRevenue - totalExpenses;
+
+  let tableRows = filtered.map(v => {
+    const c = customers.find(x => x.id === v.customerId);
+    const { profit } = calcProfit(v.revenue, v.expenses);
+    const cs = collectionStatus(v.revenue, v.collected !== undefined ? v.collected : null);
+    const tag = v.cancelled ? '🚫 ' : v.isFuture ? '📅 ' : '';
+    return `<tr>
+      <td>${tag}${formatDate(v.date)}</td>
+      <td>${c ? c.name : '—'}</td>
+      <td>${v.revenue > 0 ? '₪'+fmt(v.revenue) : '—'}</td>
+      <td style="color:${cs.color || '#000'}">${v.collected !== null && v.collected !== undefined && !v.isFuture ? '₪'+fmt(v.collected) : '—'}</td>
+      <td>${v.expenses > 0 ? '₪'+fmt(v.expenses) : '—'}</td>
+      <td style="color:${profit>=0?'#1b5e20':'#b71c1c'}">${v.revenue > 0 ? '₪'+fmt(profit) : '—'}</td>
+      <td>${v.hours != null ? v.hours : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html dir="rtl" lang="he">
+  <head><meta charset="UTF-8"><title>דוח גינני</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; color: #212121; direction: rtl; }
+    h1 { font-size: 16px; color: #1b5e20; margin-bottom: 4px; }
+    .sub { font-size: 11px; color: #616161; margin-bottom: 14px; }
+    .summary { display: flex; gap: 20px; margin-bottom: 14px; flex-wrap: wrap; }
+    .tile { background: #e8f5e9; border-radius: 6px; padding: 8px 14px; text-align: center; }
+    .tile .v { font-size: 15px; font-weight: 800; color: #1b5e20; }
+    .tile .l { font-size: 10px; color: #555; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th { background: #1b5e20; color: #fff; padding: 6px 8px; text-align: right; }
+    td { padding: 5px 8px; border-bottom: 1px solid #e0e0e0; }
+    tr:nth-child(even) td { background: #f9f9f9; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style></head>
+  <body>
+    <h1>📊 דוח סיכום ביקורים – גינני</h1>
+    <div class="sub">סינון: ${desc} | הופק: ${dateStr}</div>
+    <div class="summary">
+      <div class="tile"><div class="v">₪${fmt(totalRevenue)}</div><div class="l">סה"כ לחיוב</div></div>
+      <div class="tile"><div class="v">₪${fmt(totalProfit)}</div><div class="l">סה"כ רווח</div></div>
+      <div class="tile"><div class="v">${filtered.length}</div><div class="l">ביקורים</div></div>
+    </div>
+    <table>
+      <thead><tr><th>תאריך</th><th>לקוח</th><th>לחיוב</th><th>נגבה</th><th>הוצ׳</th><th>רווח</th><th>שע׳</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <script>window.onload = () => { window.print(); }<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function reportByEmail() {
+  exportReportExcel();
+  const email = loadSettings().backupEmail || '';
+  const dateStr = new Date().toISOString().split('T')[0];
+  const desc = buildReportDesc();
+  const subject = encodeURIComponent(`דוח גינני – ${desc} – ${dateStr}`);
+  const body = encodeURIComponent(`הדוח צורף כקובץ CSV. ניתן לפתוח עם Excel.`);
+  setTimeout(() => { window.location.href = `mailto:${email}?subject=${subject}&body=${body}`; }, 700);
+}
+
+async function reportByWhatsapp() {
+  const filtered = getReportData();
+  const desc = buildReportDesc();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const BOM = '﻿';
+  const headers = ['תאריך', 'לקוח', 'לחיוב', 'נגבה', 'הוצאות', 'רווח', 'שעות'];
+  const rows = filtered.map(v => {
+    const c = customers.find(x => x.id === v.customerId);
+    const { profit } = calcProfit(v.revenue, v.expenses);
+    const tag = v.cancelled ? '🚫 ' : v.isFuture ? '📅 ' : '';
+    return [
+      tag + formatDate(v.date), c ? c.name : '—',
+      v.revenue > 0 ? '₪'+fmt(v.revenue) : '—',
+      v.collected !== null && v.collected !== undefined && !v.isFuture ? '₪'+fmt(v.collected) : '—',
+      v.expenses > 0 ? '₪'+fmt(v.expenses) : '—',
+      v.revenue > 0 ? '₪'+fmt(profit) : '—',
+      v.hours != null ? v.hours : '—'
+    ].map(x => `"${String(x).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = BOM + [headers.join(','), ...rows].join('\r\n');
+  const fileName = `ginni-report-${dateStr}.csv`;
+  const file = new File([csv], fileName, { type: 'text/csv' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: `דוח גינני – ${desc}` });
+      return;
+    } catch(e) { if (e.name === 'AbortError') return; }
+  }
+  // fallback
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const a = document.createElement('a'); a.href = url; a.download = fileName; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ─── Render Visits ────────────────────────────────────────────────────────────
