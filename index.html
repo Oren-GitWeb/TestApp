@@ -877,7 +877,10 @@
 <!-- ═══ POPUP: Settings ═══ -->
 <div id="popup-settings" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:flex-start;justify-content:flex-end;padding-top:56px;padding-left:12px;padding-right:12px">
   <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
-    <div style="font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--green-dark)">⚙️ הגדרות</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:1rem;font-weight:700;color:var(--green-dark)">⚙️ הגדרות</div>
+      <div style="font-size:0.72rem;color:var(--gray-3);background:var(--gray-1);border-radius:6px;padding:3px 8px;font-family:monospace" id="version-label"></div>
+    </div>
 
     <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">גיבוי נתונים</div>
 
@@ -946,6 +949,7 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
+const APP_VERSION   = '01.01.001';
 const VISITS_KEY    = 'gardenapp_visits';
 const CUSTOMERS_KEY = 'gardenapp_customers';
 const META_KEY      = 'gardenapp_meta';
@@ -1276,6 +1280,7 @@ function loadSettings() {
 function openSettings() {
   const s = loadSettings();
   document.getElementById('settings-email').value = s.backupEmail || '';
+  document.getElementById('version-label').textContent = 'v' + APP_VERSION;
   const el = document.getElementById('popup-settings');
   el.style.display = 'flex';
 }
