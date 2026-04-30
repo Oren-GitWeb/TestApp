@@ -2456,7 +2456,7 @@ function initCalSwipe() {
       setTimeout(() => {
         // instant reset to opposite side (no animation)
         slide(-dir * W, false);
-        if (dir > 0) calPrevWeek(); else calNextWeek();
+        if (dir > 0) calNextWeek(); else calPrevWeek();
         // slide in from opposite side
         requestAnimationFrame(() => requestAnimationFrame(() => slide(0, true)));
       }, 280);
