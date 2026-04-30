@@ -2557,9 +2557,10 @@ function calYToMin(yInCol) {
   const raw = (yInCol / CAL_HOUR_H) * 60;
   return Math.max(0, Math.min(calSnapMin(raw), (CAL_END_HOUR - CAL_START_HOUR) * 60 - 15));
 }
-function calGetYInCol(e, colEl) {
-  // getBoundingClientRect already accounts for scroll, so no need to add scrollTop
-  return e.clientY - colEl.getBoundingClientRect().top;
+function calGetYInCol(e) {
+  // Use the scroll container as reference — stable across devices and scroll positions
+  const scroll = document.getElementById('cal-scroll');
+  return e.clientY - scroll.getBoundingClientRect().top + scroll.scrollTop;
 }
 
 function addCalDragListeners(colEl, dateStr) {
