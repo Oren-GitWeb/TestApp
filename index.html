@@ -288,6 +288,12 @@
       margin-bottom: 4px;
     }
     .form-label-row label { margin-bottom: 0; }
+    /* Prevent iOS long-press context menu and text selection on calendar */
+    #cal-scroll, #cal-time-grid, #cal-day-headers {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
     .waze-btn {
       flex-shrink: 0;
       background: #05c8f0;
@@ -1577,7 +1583,7 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.011';
+const APP_VERSION   = '01.01.012';
 const CHANGELOG = [
   { v: '01.01.010', date: '2026-04-29', notes: ['הזנת ביקור מהקלטה קולית — פענוח אוטומטי ומילוי טופס'] },
   { v: '01.01.009', date: '2026-04-29', notes: ['כפתור הגדרות רק במסך יומן עבודה', 'עמודת "מה בוצע" בכל ייצוא דוח', 'ייבוא ביקורים מ-Excel / CSV'] },
@@ -2613,6 +2619,9 @@ function renderCalendar() {
     selDiv.className = 'cal-sel-overlay';
     selDiv.dataset.date = ds;
     selDiv.style.cssText = 'position:absolute;left:1px;right:1px;border-radius:4px;background:rgba(30,136,229,0.25);border:2px solid #1e88e5;display:none;pointer-events:none;z-index:3;';
+    const selLabel = document.createElement('div');
+    selLabel.style.cssText = 'font-size:0.62rem;color:#1e88e5;font-weight:700;padding:2px 4px';
+    selDiv.appendChild(selLabel);
     col.appendChild(selDiv);
 
     addCalDragListeners(col, ds);
@@ -2668,8 +2677,9 @@ function calGetYInCol(e) {
 }
 
 function addCalDragListeners(colEl, dateStr) {
-  // touch-action:none gives JS full control; we implement scroll manually when not selecting
   colEl.style.touchAction = 'none';
+  // Prevent iOS long-press context menu from interrupting drag
+  colEl.addEventListener('contextmenu', e => e.preventDefault());
 
   const LONG_PRESS_MS  = 380;
   const MOVE_CANCEL_PX = 12;
@@ -2757,19 +2767,17 @@ function addCalDragListeners(colEl, dateStr) {
 }
 
 function updateCalSelectionOverlay(drag) {
-  // hide all overlays first
   document.querySelectorAll('.cal-sel-overlay').forEach(el => el.style.display = 'none');
   if (!drag) return;
   const startPx = (drag.startMin / 60) * CAL_HOUR_H;
   const endPx   = (drag.endMin   / 60) * CAL_HOUR_H;
   const selDiv = drag.colEl.querySelector('.cal-sel-overlay');
   if (selDiv) {
-    selDiv.style.display = 'block';
     selDiv.style.top    = startPx + 'px';
     selDiv.style.height = Math.max(20, endPx - startPx) + 'px';
-    // show time label inside
-    selDiv.innerHTML = `<div style="font-size:0.62rem;color:#1e88e5;font-weight:700;padding:2px 4px">
-      ${calMinToTime(drag.startMin)} – ${calMinToTime(drag.endMin)}</div>`;
+    selDiv.style.display = 'block';
+    const lbl = selDiv.firstChild;
+    if (lbl) lbl.textContent = `${calMinToTime(drag.startMin)} – ${calMinToTime(drag.endMin)}`;
   }
 }
 
