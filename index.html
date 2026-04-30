@@ -272,10 +272,12 @@
     #v-start-time {
       font-size: 0.88rem;
       width: 100%;
+      min-width: 0;
       box-sizing: border-box;
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-row > .form-group { min-width: 0; overflow: hidden; }
 
     /* ─── Buttons ─── */
     .btn {
@@ -2703,8 +2705,9 @@ function addCalDragListeners(colEl, dateStr) {
   }, { passive: true });
 
   colEl.addEventListener('touchend', e => {
+    const wasActive = lpActive; // save before cancelLP resets it
     cancelLP();
-    if (!lpActive || !calDrag || calDrag.colEl !== colEl) { lpActive = false; return; }
+    if (!wasActive || !calDrag || calDrag.colEl !== colEl) { lpActive = false; return; }
     lpActive = false;
     const dur = calDrag.endMin - calDrag.startMin;
     calSelection = {
