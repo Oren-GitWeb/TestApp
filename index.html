@@ -2262,7 +2262,7 @@ function openVisitDetail(visitId) {
   document.getElementById('detail-body').innerHTML = `
     ${v.cancelled ? `<div style="background:#f5f5f5;color:#757575;border-radius:8px;padding:7px 12px;font-weight:700;font-size:0.85rem;margin-bottom:10px;border:1.5px solid #bdbdbd">🚫 ביקור זה מסומן כמבוטל</div>` : ''}
     <div class="card-row"><label>תאריך</label><span class="date-chip">${formatDate(v.date)}</span></div>
-    ${v.address ? `<div class="card-row"><label>כתובת</label><span>${v.address}</span></div>` : ''}
+    ${(v.address || (c && c.address)) ? (() => { const addr = v.address || c.address; const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(addr)}&navigate=yes`; return `<div class="card-row"><label>כתובת</label><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${escHtml(addr)}<a href="${wazeUrl}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;background:#00d4e0;color:#fff;font-weight:700;font-size:0.75rem;padding:3px 10px;border-radius:14px;text-decoration:none;white-space:nowrap">🚗 Waze</a></span></div>`; })() : ''}
     ${c && c.contact ? `<div class="card-row"><label>איש קשר</label><span>${c.contact}</span></div>` : ''}
     ${c && c.phone ? `<div class="card-row"><label>טלפון</label><span><a href="tel:${c.phone}" style="color:var(--green-dark);text-decoration:none;">${c.phone}</a></span></div>` : ''}
     <hr style="border:none;border-top:1px solid var(--gray-2);margin:10px 0" />
@@ -2399,8 +2399,29 @@ function calDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
+// ── Calendar swipe navigation (one-time setup) ────────────────────────────────
+let _calSwipeInit = false;
+function initCalSwipe() {
+  if (_calSwipeInit) return;
+  _calSwipeInit = true;
+  const screen = document.getElementById('screen-calendar');
+  let swipeStartX = 0, swipeStartY = 0;
+  screen.addEventListener('touchstart', e => {
+    swipeStartX = e.touches[0].clientX;
+    swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+  screen.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    const dy = e.changedTouches[0].clientY - swipeStartY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx > 0) calPrevWeek(); else calNextWeek();
+    }
+  }, { passive: true });
+}
+
 function renderCalendar() {
   if (!calWeekStart) calWeekStart = calGetWeekStart(new Date());
+  initCalSwipe();
 
   const todayStr = calDateStr(new Date());
   const allVisits  = load(VISITS_KEY)    || [];
