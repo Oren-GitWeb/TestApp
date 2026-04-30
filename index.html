@@ -801,13 +801,15 @@
   <!-- SCREEN: Calendar -->
   <div class="screen" id="screen-calendar">
     <!-- Cal top bar -->
-    <div id="cal-topbar" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--gray-2);flex-shrink:0;flex-wrap:wrap">
+    <div id="cal-topbar" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--gray-2);flex-shrink:0;flex-wrap:nowrap;overflow:hidden">
       <button onclick="calGoToday()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0">היום</button>
-      <select id="cal-month-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 6px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0"></select>
-      <select id="cal-year-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 6px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0;width:72px"></select>
-      <span id="cal-range-label" style="font-size:0.82rem;font-weight:600;color:var(--dark);flex:1;text-align:left;white-space:nowrap"></span>
-      <button onclick="calPrevWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8249;</button>
-      <button onclick="calNextWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8250;</button>
+      <select id="cal-month-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 4px;font-size:0.75rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0;max-width:72px"></select>
+      <select id="cal-year-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 4px;font-size:0.75rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0;width:64px"></select>
+      <div style="display:flex;align-items:center;gap:0;flex:1;min-width:0;justify-content:flex-end">
+        <button onclick="calPrevWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8249;</button>
+        <span id="cal-range-label" style="font-size:0.75rem;font-weight:600;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0"></span>
+        <button onclick="calNextWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8250;</button>
+      </div>
     </div>
     <!-- Day headers -->
     <div id="cal-day-headers" style="display:grid;grid-template-columns:40px repeat(7,1fr);border-bottom:1px solid var(--gray-2);flex-shrink:0">
