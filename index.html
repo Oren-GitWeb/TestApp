@@ -581,6 +581,13 @@
       to   { opacity: var(--op,0.18); transform: rotate(var(--rot,0deg)) scale(1); }
     }
 
+    /* ─── Calendar ─── */
+    #screen-calendar { padding: 0 !important; }
+    #screen-calendar.active { display: flex !important; flex-direction: column; overflow: hidden; }
+    #cal-day-headers { background: #fff; position: sticky; top: 0; z-index: 5; }
+    #cal-time-grid > div { min-height: 100%; }
+    #cal-scroll { -webkit-overflow-scrolling: touch; }
+
     /* ─── Setup wizard steps ─── */
     .setup-step-tab {
       width: 30px; height: 30px;
@@ -758,6 +765,25 @@
     <div id="visits-list"></div>
   </div>
 
+  <!-- SCREEN: Calendar -->
+  <div class="screen" id="screen-calendar">
+    <!-- Cal top bar -->
+    <div id="cal-topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--gray-2);flex-shrink:0">
+      <button onclick="calGoToday()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer">היום</button>
+      <button onclick="calPrevWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 6px">&#8249;</button>
+      <button onclick="calNextWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 6px">&#8250;</button>
+      <span id="cal-range-label" style="font-size:0.88rem;font-weight:600;color:var(--dark);flex:1"></span>
+    </div>
+    <!-- Day headers -->
+    <div id="cal-day-headers" style="display:grid;grid-template-columns:40px repeat(7,1fr);border-bottom:1px solid var(--gray-2);flex-shrink:0">
+      <div></div><!-- spacer for time gutter -->
+    </div>
+    <!-- Scrollable time grid -->
+    <div id="cal-scroll" style="flex:1;overflow-y:auto;position:relative">
+      <div id="cal-time-grid" style="display:grid;grid-template-columns:40px repeat(7,1fr);position:relative"></div>
+    </div>
+  </div>
+
   <!-- SCREEN: Customers -->
   <div class="screen" id="screen-customers">
     <div class="search-wrap">
@@ -771,6 +797,9 @@
   <nav class="bottom-nav">
     <button class="nav-btn active" data-screen="visits" onclick="navigate('visits')">
       <span class="icon">📋</span>יומן עבודה
+    </button>
+    <button class="nav-btn" data-screen="calendar" onclick="navigate('calendar')">
+      <span class="icon">📅</span>לוח שנה
     </button>
     <button class="nav-btn" id="nav-reports-btn" onclick="openReport()">
       <span class="icon">📊</span>דוחות
@@ -804,9 +833,15 @@
           <button type="button" onclick="openQuickCustomer()" title="הוסף לקוח חדש" style="flex-shrink:0;background:var(--green-pale);border:1.5px solid var(--green-light);color:var(--green-dark);border-radius:50%;width:36px;height:36px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">+</button>
         </div>
       </div>
-      <div class="form-group">
-        <label>תאריך ביקור *</label>
-        <input type="date" id="v-date" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>תאריך ביקור *</label>
+          <input type="date" id="v-date" />
+        </div>
+        <div class="form-group">
+          <label>שעת התחלה</label>
+          <input type="time" id="v-start-time" placeholder="08:00" />
+        </div>
       </div>
       <div class="form-group">
         <label>כתובת (אפשר לשנות לביקור זה)</label>
@@ -1631,7 +1666,15 @@ function navigate(screen) {
     fabLabel.textContent = 'ביקור חדש';
     document.getElementById('fab-icon').textContent = '📋';
     document.getElementById('topbar-action').style.display = 'none';
+    fab.style.display = '';
     renderVisits();
+  } else if (screen === 'calendar') {
+    topbar.textContent = 'לוח שנה';
+    document.getElementById('topbar-action').style.display = 'none';
+    fabLabel.textContent = 'ביקור חדש';
+    document.getElementById('fab-icon').textContent = '📋';
+    fab.style.display = '';
+    renderCalendar();
   } else {
     topbar.textContent = 'לקוחות';
     fabLabel.textContent = 'לקוח חדש';
@@ -1640,13 +1683,16 @@ function navigate(screen) {
     actionBtn.textContent = '📲 ייבא אנשי קשר';
     actionBtn.style.display = '';
     actionBtn.onclick = importContacts;
+    fab.style.display = '';
     renderCustomers();
   }
 }
 
 document.getElementById('fab-btn').addEventListener('click', () => {
-  if (currentScreen === 'visits') openVisitForm();
-  else openCustomerForm();
+  if (currentScreen === 'visits' || currentScreen === 'calendar') {
+    const prefill = (currentScreen === 'calendar' && calSelection) ? calSelection : null;
+    openVisitForm(null, prefill);
+  } else openCustomerForm();
 });
 
 // ─── Overlay helpers ─────────────────────────────────────────────────────────
@@ -1735,7 +1781,7 @@ function openWazeAddress(addr) {
   window.open(`waze://?q=${q}&navigate=yes`, '_blank');
 }
 
-function openVisitForm(visitId) {
+function openVisitForm(visitId, prefill) {
   // populate customer dropdown
   const sel = document.getElementById('v-customer');
   sel.innerHTML = '<option value="">— בחר לקוח —</option>';
@@ -1749,6 +1795,7 @@ function openVisitForm(visitId) {
     document.getElementById('v-id').value = v.id;
     document.getElementById('v-customer').value = v.customerId || '';
     document.getElementById('v-date').value = v.date;
+    document.getElementById('v-start-time').value = v.startTime || (currentScreen === 'calendar' ? '08:00' : '');
     document.getElementById('v-address').value = v.address || '';
     document.getElementById('v-revenue').value = v.revenue || '';
     document.getElementById('v-collected').value = v.collected !== null && v.collected !== undefined ? v.collected : '';
@@ -1768,16 +1815,19 @@ function openVisitForm(visitId) {
     document.getElementById('visit-drawer-title').textContent = 'ביקור חדש';
     document.getElementById('v-id').value = '';
     document.getElementById('v-customer').value = '';
-    document.getElementById('v-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('v-date').value = prefill ? prefill.date : new Date().toISOString().split('T')[0];
+    document.getElementById('v-start-time').value = prefill ? (prefill.startTime || '') : '';
     document.getElementById('v-address').value = '';
     document.getElementById('v-revenue').value = '';
     document.getElementById('v-collected').value = '';
     document.getElementById('v-expenses').value = '';
-    document.getElementById('v-hours').value = '';
+    document.getElementById('v-hours').value = prefill ? (prefill.hours || '') : '';
     document.getElementById('v-notes').value = '';
     document.getElementById('v-next-date').value = '';
     document.getElementById('v-next-notes').value = '';
     document.getElementById('profit-preview').style.display = 'none';
+    // clear calendar selection after opening form
+    if (prefill) { calSelection = null; updateFabForCalSelection(); }
   }
   updateProfitPreview();
   // show "clear" button only for future/today visits
@@ -1819,6 +1869,7 @@ function saveVisit() {
     id,
     customerId,
     date,
+    startTime: document.getElementById('v-start-time').value || '',
     address: document.getElementById('v-address').value.trim(),
     revenue: parseFloat(revenue) || 0,
     expenses: parseFloat(document.getElementById('v-expenses').value) || 0,
@@ -1855,7 +1906,8 @@ function saveVisit() {
 
   save(VISITS_KEY, visits);
   closeOverlay('overlay-visit');
-  renderVisits();
+  if (currentScreen === 'calendar') renderCalendar();
+  else renderVisits();
 }
 
 // ─── Settings & Backup ────────────────────────────────────────────────────────
@@ -2302,6 +2354,311 @@ function buildReportDesc() {
   if (filterCollections.length) parts.push('גביה: ' + filterCollections.map(k => collLabels[k] || k).join(', '));
   if (q) parts.push('חיפוש: "' + q + '"');
   return parts.length ? parts.join(' | ') : 'כל הביקורים';
+}
+
+// ─── Calendar (week view) ────────────────────────────────────────────────────
+const CAL_COLORS = [
+  '#aed6f1','#a9dfbf','#f9e79f','#f5cba7','#d7bde2',
+  '#a8d8ea','#fadadd','#d5e8d4','#fde8c8','#c8e6f5',
+  '#b2dfdb','#f8bbd0','#dcedc8','#ffe0b2','#e1bee7',
+];
+const CAL_TEXT_COLORS = [
+  '#1a5276','#1e8449','#7d6608','#784212','#6c3483',
+  '#0e6655','#922b21','#1d6a39','#784212','#1a5276',
+  '#00695c','#ad1457','#558b2f','#e65100','#6a1b9a',
+];
+const HE_DAYS  = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+const HE_MONTHS_SHORT = ['ינו','פבר','מרץ','אפר','מאי','יוני','יולי','אוג','ספט','אוק','נוב','דצמ'];
+const CAL_START_HOUR = 7;   // first hour shown
+const CAL_END_HOUR   = 21;  // last hour shown
+const CAL_HOUR_H     = 56;  // px per hour
+
+let calWeekStart = null; // Monday of current displayed week
+
+function calGetWeekStart(date) {
+  const d = new Date(date);
+  const dow = d.getDay(); // 0=Sun
+  d.setDate(d.getDate() - dow); // go to Sunday
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function calCustomerColorIdx(customerId) {
+  const custs = load(CUSTOMERS_KEY) || [];
+  const idx = custs.findIndex(c => c.id === customerId);
+  return (idx < 0 ? 0 : idx) % CAL_COLORS.length;
+}
+function calCustomerColor(customerId) {
+  return CAL_COLORS[calCustomerColorIdx(customerId)];
+}
+function calCustomerTextColor(customerId) {
+  return CAL_TEXT_COLORS[calCustomerColorIdx(customerId)];
+}
+
+function calDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function renderCalendar() {
+  if (!calWeekStart) calWeekStart = calGetWeekStart(new Date());
+
+  const todayStr = calDateStr(new Date());
+  const allVisits  = load(VISITS_KEY)    || [];
+  const allCustomers = load(CUSTOMERS_KEY) || [];
+
+  // Range label
+  const weekEnd = new Date(calWeekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+  const fmt = d => d.getDate() + ' ' + HE_MONTHS_SHORT[d.getMonth()];
+  document.getElementById('cal-range-label').textContent =
+    fmt(calWeekStart) + ' – ' + fmt(weekEnd) + ' ' + weekEnd.getFullYear();
+
+  // Build day headers
+  const headersEl = document.getElementById('cal-day-headers');
+  headersEl.innerHTML = '<div></div>';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calWeekStart); d.setDate(d.getDate() + i);
+    const ds = calDateStr(d);
+    const isToday = ds === todayStr;
+    const isSat = d.getDay() === 6;
+    const col = document.createElement('div');
+    col.style.cssText = 'text-align:center;padding:6px 2px;border-left:1px solid var(--gray-2);';
+    col.innerHTML = `<div style="font-size:0.68rem;color:${isSat?'#e53935':'var(--gray-3)'};font-weight:600">${HE_DAYS[d.getDay()]}</div>
+      <div style="width:28px;height:28px;border-radius:50%;margin:2px auto 0;display:flex;align-items:center;justify-content:center;font-size:0.88rem;font-weight:700;
+        background:${isToday?'var(--green)':'transparent'};color:${isToday?'#fff':isSat?'#e53935':'var(--dark)'}">${d.getDate()}</div>`;
+    headersEl.appendChild(col);
+  }
+
+  // Build time grid
+  const grid = document.getElementById('cal-time-grid');
+  grid.innerHTML = '';
+  const totalHours = CAL_END_HOUR - CAL_START_HOUR;
+  grid.style.height = (totalHours * CAL_HOUR_H) + 'px';
+
+  // Time gutter column
+  const gutterCol = document.createElement('div');
+  gutterCol.style.cssText = 'position:relative;';
+  for (let h = CAL_START_HOUR; h < CAL_END_HOUR; h++) {
+    const label = document.createElement('div');
+    label.textContent = h + ':00';
+    label.style.cssText = `position:absolute;top:${(h-CAL_START_HOUR)*CAL_HOUR_H - 8}px;left:0;right:0;
+      text-align:left;font-size:0.62rem;color:var(--gray-3);padding-right:4px;text-align:right;`;
+    gutterCol.appendChild(label);
+  }
+  grid.appendChild(gutterCol);
+
+  // Day columns
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calWeekStart); d.setDate(d.getDate() + i);
+    const ds = calDateStr(d);
+    const isToday = ds === todayStr;
+    const isSat = d.getDay() === 6;
+
+    const col = document.createElement('div');
+    col.style.cssText = `position:relative;border-left:1px solid var(--gray-2);
+      background:${isToday?'rgba(45,106,45,0.04)':isSat?'rgba(229,57,53,0.03)':'#fff'};`;
+
+    // Hour lines
+    for (let h = 0; h < totalHours; h++) {
+      const line = document.createElement('div');
+      line.style.cssText = `position:absolute;top:${h*CAL_HOUR_H}px;left:0;right:0;
+        border-top:1px solid ${h===0?'var(--gray-2)':'#f0f0f0'};pointer-events:none;`;
+      col.appendChild(line);
+    }
+
+    // Visit blocks for this day
+    const dayVisits = allVisits.filter(v => v.date === ds);
+    dayVisits.forEach(v => {
+      const cust = allCustomers.find(c => c.id === v.customerId);
+      const name = cust ? cust.name : 'ביקור';
+      const color    = calCustomerColor(v.customerId);
+      const txtColor = calCustomerTextColor(v.customerId);
+      const timeStr = v.startTime || '08:00';
+      const [hh, mm] = timeStr.split(':').map(Number);
+      const startMin = (hh - CAL_START_HOUR) * 60 + (mm || 0);
+      const durMin   = Math.max(45, (v.hours || 1) * 60);
+      const topPx    = Math.max(0, (startMin / 60) * CAL_HOUR_H);
+      const heightPx = Math.min((durMin / 60) * CAL_HOUR_H, (totalHours * CAL_HOUR_H) - topPx);
+
+      const block = document.createElement('div');
+      block.style.cssText = `position:absolute;top:${topPx}px;left:2px;right:2px;height:${Math.max(22,heightPx-2)}px;
+        background:${color};border-left:3px solid ${txtColor};border-radius:4px;padding:2px 5px;overflow:hidden;z-index:4;cursor:crosshair;`;
+
+      // Name row — click → detail
+      const nameEl = document.createElement('div');
+      nameEl.className = 'cal-visit-name';
+      nameEl.textContent = name;
+      nameEl.style.cssText = `font-size:0.65rem;font-weight:700;color:${txtColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:underline dotted ${txtColor}80;`;
+      nameEl.onclick = (e) => { e.stopPropagation(); openVisitDetail(v.id); };
+      block.appendChild(nameEl);
+
+      if (timeStr) {
+        const timeEl = document.createElement('div');
+        timeEl.textContent = timeStr;
+        timeEl.style.cssText = `font-size:0.58rem;color:${txtColor}cc;pointer-events:none;`;
+        block.appendChild(timeEl);
+      }
+      col.appendChild(block);
+    });
+
+    // Selection overlay for this column
+    const selDiv = document.createElement('div');
+    selDiv.className = 'cal-sel-overlay';
+    selDiv.dataset.date = ds;
+    selDiv.style.cssText = 'position:absolute;left:1px;right:1px;border-radius:4px;background:rgba(30,136,229,0.25);border:2px solid #1e88e5;display:none;pointer-events:none;z-index:3;';
+    col.appendChild(selDiv);
+
+    addCalDragListeners(col, ds);
+    grid.appendChild(col);
+  }
+
+  // Draw existing selection if on same week
+  drawCalSelection();
+
+  // Current time red line
+  const now = new Date();
+  const nowDateStr = calDateStr(now);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(calWeekStart); d.setDate(d.getDate() + i);
+    if (calDateStr(d) === nowDateStr) {
+      const minFromStart = (now.getHours() - CAL_START_HOUR) * 60 + now.getMinutes();
+      const topPx = (minFromStart / 60) * CAL_HOUR_H;
+      if (topPx >= 0 && topPx <= totalHours * CAL_HOUR_H) {
+        const colEl = grid.children[i + 1]; // +1 for gutter
+        const line = document.createElement('div');
+        line.style.cssText = `position:absolute;top:${topPx}px;left:-4px;right:0;height:2px;background:#e53935;z-index:2;pointer-events:none;`;
+        const dot = document.createElement('div');
+        dot.style.cssText = `position:absolute;top:${topPx-4}px;left:-6px;width:10px;height:10px;border-radius:50%;background:#e53935;z-index:2;pointer-events:none;`;
+        colEl.appendChild(line);
+        colEl.appendChild(dot);
+      }
+      break;
+    }
+  }
+
+  // Scroll to 7:00 (or current time)
+  const now2 = new Date();
+  const scrollH = now2.getHours() >= CAL_START_HOUR
+    ? (now2.getHours() - CAL_START_HOUR - 1) * CAL_HOUR_H
+    : 0;
+  document.getElementById('cal-scroll').scrollTop = Math.max(0, scrollH);
+}
+
+// ── Calendar drag-to-select ───────────────────────────────────────────────────
+let calSelection = null; // { date, startTime, endTime, hours }
+let calDrag = null;      // drag state
+
+function calSnapMin(raw) { return Math.round(raw / 15) * 15; }
+function calMinToTime(min) {
+  const h = CAL_START_HOUR + Math.floor(min / 60);
+  const m = min % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+function calYToMin(yInCol) {
+  const raw = (yInCol / CAL_HOUR_H) * 60;
+  return Math.max(0, Math.min(calSnapMin(raw), (CAL_END_HOUR - CAL_START_HOUR) * 60 - 15));
+}
+function calGetYInCol(e, colEl) {
+  // getBoundingClientRect already accounts for scroll, so no need to add scrollTop
+  return e.clientY - colEl.getBoundingClientRect().top;
+}
+
+function addCalDragListeners(colEl, dateStr) {
+  colEl.addEventListener('pointerdown', e => {
+    if (e.target.closest('.cal-visit-name')) return; // let name handle detail click
+    e.preventDefault();
+    colEl.setPointerCapture(e.pointerId);
+    const startMin = calYToMin(calGetYInCol(e, colEl));
+    calDrag = { colEl, dateStr, startMin, endMin: startMin + 60 };
+    calSelection = null;
+    updateCalSelectionOverlay(calDrag);
+    updateFabForCalSelection();
+  });
+
+  colEl.addEventListener('pointermove', e => {
+    if (!calDrag || calDrag.colEl !== colEl) return;
+    const curMin = calYToMin(calGetYInCol(e, colEl));
+    calDrag.endMin = Math.max(calDrag.startMin + 15, curMin);
+    updateCalSelectionOverlay(calDrag);
+  });
+
+  colEl.addEventListener('pointerup', e => {
+    if (!calDrag || calDrag.colEl !== colEl) return;
+    const dur = calDrag.endMin - calDrag.startMin;
+    calSelection = {
+      date:      calDrag.dateStr,
+      startTime: calMinToTime(calDrag.startMin),
+      endTime:   calMinToTime(calDrag.endMin),
+      hours:     Math.round(dur / 60 * 4) / 4
+    };
+    calDrag = null;
+    updateCalSelectionOverlay(null);
+    drawCalSelection();
+    updateFabForCalSelection();
+  });
+
+  colEl.addEventListener('pointercancel', () => {
+    if (calDrag && calDrag.colEl === colEl) {
+      calDrag = null;
+      updateCalSelectionOverlay(null);
+    }
+  });
+}
+
+function updateCalSelectionOverlay(drag) {
+  // hide all overlays first
+  document.querySelectorAll('.cal-sel-overlay').forEach(el => el.style.display = 'none');
+  if (!drag) return;
+  const startPx = (drag.startMin / 60) * CAL_HOUR_H;
+  const endPx   = (drag.endMin   / 60) * CAL_HOUR_H;
+  const selDiv = drag.colEl.querySelector('.cal-sel-overlay');
+  if (selDiv) {
+    selDiv.style.display = 'block';
+    selDiv.style.top    = startPx + 'px';
+    selDiv.style.height = Math.max(20, endPx - startPx) + 'px';
+    // show time label inside
+    selDiv.innerHTML = `<div style="font-size:0.62rem;color:#1e88e5;font-weight:700;padding:2px 4px">
+      ${calMinToTime(drag.startMin)} – ${calMinToTime(drag.endMin)}</div>`;
+  }
+}
+
+function drawCalSelection() {
+  document.querySelectorAll('.cal-sel-overlay').forEach(el => el.style.display = 'none');
+  if (!calSelection) return;
+  const sel = calSelection;
+  const startMin = (parseInt(sel.startTime) - CAL_START_HOUR) * 60 + parseInt(sel.startTime.split(':')[1]);
+  const endMin   = (parseInt(sel.endTime)   - CAL_START_HOUR) * 60 + parseInt(sel.endTime.split(':')[1]);
+  const startPx  = (startMin / 60) * CAL_HOUR_H;
+  const endPx    = (endMin   / 60) * CAL_HOUR_H;
+  const selDiv = document.querySelector(`.cal-sel-overlay[data-date="${sel.date}"]`);
+  if (selDiv) {
+    selDiv.style.display = 'block';
+    selDiv.style.top    = startPx + 'px';
+    selDiv.style.height = Math.max(20, endPx - startPx) + 'px';
+    selDiv.innerHTML = `<div style="font-size:0.62rem;color:#1e88e5;font-weight:700;padding:2px 4px">
+      ${sel.startTime} – ${sel.endTime}</div>`;
+  }
+}
+
+function updateFabForCalSelection() {
+  const fabLabel = document.getElementById('fab-label');
+  if (calSelection) {
+    fabLabel.textContent = `ביקור ${calSelection.startTime}–${calSelection.endTime}`;
+  } else {
+    fabLabel.textContent = 'ביקור חדש';
+  }
+}
+
+function calPrevWeek() {
+  calWeekStart.setDate(calWeekStart.getDate() - 7);
+  renderCalendar();
+}
+function calNextWeek() {
+  calWeekStart.setDate(calWeekStart.getDate() + 7);
+  renderCalendar();
+}
+function calGoToday() {
+  calWeekStart = calGetWeekStart(new Date());
+  renderCalendar();
 }
 
 function openReport() {
