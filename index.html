@@ -263,21 +263,47 @@
       width: 100%;
       box-sizing: border-box;
     }
-    /* date fields in visit form */
-    #v-date, #v-next-date {
-      font-size: 0.88rem;
-      max-width: 100%;
-    }
-    /* time field — match number fields */
-    #v-start-time {
+    /* date / time fields — consistent on iOS */
+    #v-date, #v-next-date, #v-start-time {
       font-size: 0.88rem;
       width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    /* iOS time input fix */
+    input[type="time"], input[type="date"] {
+      -webkit-appearance: none;
+      appearance: none;
       min-width: 0;
       box-sizing: border-box;
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .form-row > .form-group { min-width: 0; overflow: hidden; }
+    /* label row with action button (e.g. Waze) */
+    .form-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .form-label-row label { margin-bottom: 0; }
+    .waze-btn {
+      flex-shrink: 0;
+      background: #05c8f0;
+      border: none;
+      border-radius: 8px;
+      padding: 4px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
 
     /* ─── Buttons ─── */
     .btn {
@@ -853,19 +879,14 @@
         </div>
       </div>
       <div class="form-group">
-        <label>כתובת (אפשר לשנות לביקור זה)</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" id="v-address" placeholder="רחוב, עיר" style="flex:1" />
-          <button type="button" onclick="openWaze()" title="נווט ב-Waze" style="flex-shrink:0;background:#05c8f0;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:4px;font-size:0.78rem;font-weight:700;color:#fff;white-space:nowrap">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 64 64" fill="white">
-              <path d="M32 4C17.1 4 5 15.6 5 29.9c0 8.6 4.4 16.2 11.1 20.9l-1.4 6.5a1.5 1.5 0 0 0 2.1 1.7l7.2-3.7c2.7.7 5.5 1.1 8.4 1.1 14.9 0 27-11.6 27-25.9C59 15.6 46.9 4 32 4z"/>
-              <circle cx="24" cy="30" r="3.5" fill="#05c8f0"/>
-              <circle cx="40" cy="30" r="3.5" fill="#05c8f0"/>
-              <path d="M24 38c2 3 5.5 5 8 5s6-2 8-5" stroke="#05c8f0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-            </svg>
+        <div class="form-label-row">
+          <button type="button" class="waze-btn" onclick="openWaze()" title="נווט ב-Waze">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 64 64" fill="white"><path d="M32 4C17.1 4 5 15.6 5 29.9c0 8.6 4.4 16.2 11.1 20.9l-1.4 6.5a1.5 1.5 0 0 0 2.1 1.7l7.2-3.7c2.7.7 5.5 1.1 8.4 1.1 14.9 0 27-11.6 27-25.9C59 15.6 46.9 4 32 4z"/><circle cx="24" cy="30" r="3.5" fill="#05c8f0"/><circle cx="40" cy="30" r="3.5" fill="#05c8f0"/><path d="M24 38c2 3 5.5 5 8 5s6-2 8-5" stroke="#05c8f0" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
             Waze
           </button>
+          <label>כתובת (אפשר לשנות לביקור זה)</label>
         </div>
+        <input type="text" id="v-address" placeholder="רחוב, עיר" />
       </div>
       <div class="form-row">
         <div class="form-group">
