@@ -270,9 +270,9 @@
     }
     /* time field — match number fields */
     #v-start-time {
-      direction: ltr;
-      text-align: right;
       font-size: 0.88rem;
+      width: 100%;
+      box-sizing: border-box;
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -773,11 +773,13 @@
   <!-- SCREEN: Calendar -->
   <div class="screen" id="screen-calendar">
     <!-- Cal top bar -->
-    <div id="cal-topbar" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--gray-2);flex-shrink:0">
-      <button onclick="calGoToday()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 12px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer">היום</button>
-      <button onclick="calPrevWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 6px">&#8249;</button>
-      <button onclick="calNextWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 6px">&#8250;</button>
-      <span id="cal-range-label" style="font-size:0.88rem;font-weight:600;color:var(--dark);flex:1"></span>
+    <div id="cal-topbar" style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--gray-2);flex-shrink:0;flex-wrap:wrap">
+      <button onclick="calGoToday()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 10px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0">היום</button>
+      <select id="cal-month-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 6px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0"></select>
+      <select id="cal-year-sel" onchange="calJumpToMonth()" style="border:1.5px solid var(--gray-2);background:#fff;border-radius:6px;padding:5px 6px;font-size:0.78rem;font-weight:600;color:var(--dark);cursor:pointer;flex-shrink:0;width:72px"></select>
+      <span id="cal-range-label" style="font-size:0.82rem;font-weight:600;color:var(--dark);flex:1;text-align:left;white-space:nowrap"></span>
+      <button onclick="calPrevWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8249;</button>
+      <button onclick="calNextWeek()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--gray-3);padding:2px 4px;flex-shrink:0">&#8250;</button>
     </div>
     <!-- Day headers -->
     <div id="cal-day-headers" style="display:grid;grid-template-columns:40px repeat(7,1fr);border-bottom:1px solid var(--gray-2);flex-shrink:0">
@@ -2476,6 +2478,7 @@ function initCalSwipe() {
 function renderCalendar() {
   if (!calWeekStart) calWeekStart = calGetWeekStart(new Date());
   initCalSwipe();
+  calInitMonthYearSelectors();
   // reset any lingering slide transform after week change
   const hdr = document.getElementById('cal-day-headers');
   const scr = document.getElementById('cal-scroll');
@@ -2615,12 +2618,8 @@ function renderCalendar() {
     }
   }
 
-  // Scroll to 7:00 (or current time)
-  const now2 = new Date();
-  const scrollH = now2.getHours() >= CAL_START_HOUR
-    ? (now2.getHours() - CAL_START_HOUR - 1) * CAL_HOUR_H
-    : 0;
-  document.getElementById('cal-scroll').scrollTop = Math.max(0, scrollH);
+  // Always open at top
+  document.getElementById('cal-scroll').scrollTop = 0;
 }
 
 // ── Calendar drag-to-select ───────────────────────────────────────────────────
@@ -2644,29 +2643,69 @@ function calGetYInCol(e) {
 }
 
 function addCalDragListeners(colEl, dateStr) {
-  colEl.style.touchAction = 'none'; // prevent browser scroll from stealing touch events
-  colEl.addEventListener('pointerdown', e => {
-    if (e.target.closest('.cal-visit-name')) return; // let name handle detail click
-    e.preventDefault();
-    colEl.setPointerCapture(e.pointerId);
-    const startMin = calYToMin(calGetYInCol(e, colEl));
-    calDrag = { colEl, dateStr, startMin, endMin: startMin + 60 };
-    calSelection = null;
-    updateCalSelectionOverlay(calDrag);
-    updateFabForCalSelection();
-  });
+  // touch-action:none gives JS full control; we implement scroll manually when not selecting
+  colEl.style.touchAction = 'none';
 
-  colEl.addEventListener('pointermove', e => {
-    if (!calDrag || calDrag.colEl !== colEl) return;
-    e.preventDefault(); // stop scroll during drag
-    const curMin = calYToMin(calGetYInCol(e, colEl));
+  const LONG_PRESS_MS  = 380;
+  const MOVE_CANCEL_PX = 12;
+
+  let lpTimer   = null;
+  let lpActive  = false;
+  let lpStartY  = 0;
+  let lastTouchY = 0;
+  let lpTouchId = null;
+
+  function cancelLP() {
+    if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+    lpActive = false;
+  }
+
+  colEl.addEventListener('touchstart', e => {
+    if (e.target.closest('.cal-visit-name')) return;
+    const t = e.changedTouches[0];
+    lpTouchId  = t.identifier;
+    lpStartY   = t.clientY;
+    lastTouchY = t.clientY;
+    cancelLP();
+
+    lpTimer = setTimeout(() => {
+      lpTimer = null;
+      lpActive = true;
+      if (navigator.vibrate) navigator.vibrate(30);
+      const startMin = calYToMin(calGetYInCol({ clientY: lpStartY }));
+      calDrag = { colEl, dateStr, startMin, endMin: startMin + 60 };
+      calSelection = null;
+      updateCalSelectionOverlay(calDrag);
+      updateFabForCalSelection();
+    }, LONG_PRESS_MS);
+  }, { passive: true });
+
+  colEl.addEventListener('touchmove', e => {
+    const t = [...e.changedTouches].find(x => x.identifier === lpTouchId);
+    if (!t) return;
+
+    if (!lpActive) {
+      // manually scroll the calendar while waiting for long press
+      const dy = lastTouchY - t.clientY;
+      document.getElementById('cal-scroll').scrollTop += dy;
+      lastTouchY = t.clientY;
+      // cancel long press if finger moved too much
+      if (Math.abs(t.clientY - lpStartY) > MOVE_CANCEL_PX) cancelLP();
+      return;
+    }
+
+    // long press confirmed — update drag selection
+    lastTouchY = t.clientY;
+    const curMin = calYToMin(calGetYInCol({ clientY: t.clientY }));
     calDrag.endMin = Math.max(calDrag.startMin + 15, curMin);
     updateCalSelectionOverlay(calDrag);
     updateFabForCalSelection();
-  });
+  }, { passive: true });
 
-  colEl.addEventListener('pointerup', e => {
-    if (!calDrag || calDrag.colEl !== colEl) return;
+  colEl.addEventListener('touchend', e => {
+    cancelLP();
+    if (!lpActive || !calDrag || calDrag.colEl !== colEl) { lpActive = false; return; }
+    lpActive = false;
     const dur = calDrag.endMin - calDrag.startMin;
     calSelection = {
       date:      calDrag.dateStr,
@@ -2678,14 +2717,17 @@ function addCalDragListeners(colEl, dateStr) {
     updateCalSelectionOverlay(null);
     drawCalSelection();
     updateFabForCalSelection();
-  });
+  }, { passive: true });
 
-  colEl.addEventListener('pointercancel', () => {
+  colEl.addEventListener('touchcancel', () => {
+    cancelLP();
+    lpActive = false;
     if (calDrag && calDrag.colEl === colEl) {
       calDrag = null;
       updateCalSelectionOverlay(null);
+      updateFabForCalSelection();
     }
-  });
+  }, { passive: true });
 }
 
 function updateCalSelectionOverlay(drag) {
@@ -2742,6 +2784,42 @@ function calNextWeek() {
   calWeekStart.setDate(calWeekStart.getDate() + 7);
   renderCalendar();
 }
+function calInitMonthYearSelectors() {
+  const HE_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  const mSel = document.getElementById('cal-month-sel');
+  const ySel = document.getElementById('cal-year-sel');
+  if (!mSel || !ySel) return;
+  // populate months once
+  if (!mSel.options.length) {
+    HE_MONTHS.forEach((m, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = m;
+      mSel.appendChild(o);
+    });
+  }
+  // populate years: current-5 to current+5
+  const curYear = new Date().getFullYear();
+  if (!ySel.options.length) {
+    for (let y = curYear - 5; y <= curYear + 5; y++) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      ySel.appendChild(o);
+    }
+  }
+  // sync selectors to current week
+  const d = calWeekStart || new Date();
+  mSel.value = d.getMonth();
+  ySel.value = d.getFullYear();
+}
+
+function calJumpToMonth() {
+  const m = parseInt(document.getElementById('cal-month-sel').value);
+  const y = parseInt(document.getElementById('cal-year-sel').value);
+  const first = new Date(y, m, 1);
+  calWeekStart = calGetWeekStart(first);
+  renderCalendar();
+}
+
 function calGoToday() {
   calWeekStart = calGetWeekStart(new Date());
   renderCalendar();
