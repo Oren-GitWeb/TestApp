@@ -2564,6 +2564,7 @@ function calGetYInCol(e) {
 }
 
 function addCalDragListeners(colEl, dateStr) {
+  colEl.style.touchAction = 'none'; // prevent browser scroll from stealing touch events
   colEl.addEventListener('pointerdown', e => {
     if (e.target.closest('.cal-visit-name')) return; // let name handle detail click
     e.preventDefault();
@@ -2577,9 +2578,11 @@ function addCalDragListeners(colEl, dateStr) {
 
   colEl.addEventListener('pointermove', e => {
     if (!calDrag || calDrag.colEl !== colEl) return;
+    e.preventDefault(); // stop scroll during drag
     const curMin = calYToMin(calGetYInCol(e, colEl));
     calDrag.endMin = Math.max(calDrag.startMin + 15, curMin);
     updateCalSelectionOverlay(calDrag);
+    updateFabForCalSelection();
   });
 
   colEl.addEventListener('pointerup', e => {
@@ -2642,7 +2645,9 @@ function drawCalSelection() {
 
 function updateFabForCalSelection() {
   const fabLabel = document.getElementById('fab-label');
-  if (calSelection) {
+  if (calDrag) {
+    fabLabel.textContent = `ביקור ${calMinToTime(calDrag.startMin)}–${calMinToTime(calDrag.endMin)}`;
+  } else if (calSelection) {
     fabLabel.textContent = `ביקור ${calSelection.startTime}–${calSelection.endTime}`;
   } else {
     fabLabel.textContent = 'ביקור חדש';
