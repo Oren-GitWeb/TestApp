@@ -263,11 +263,16 @@
       width: 100%;
       box-sizing: border-box;
     }
-    /* date fields in visit form — 30% smaller */
+    /* date fields in visit form */
     #v-date, #v-next-date {
-      padding: 7px 8px;
-      font-size: 0.67rem;
-      max-width: 72%;
+      font-size: 0.88rem;
+      max-width: 100%;
+    }
+    /* time field — match number fields */
+    #v-start-time {
+      direction: ltr;
+      text-align: right;
+      font-size: 0.88rem;
     }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
