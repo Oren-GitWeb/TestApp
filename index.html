@@ -4378,9 +4378,20 @@ function gsInit() {
     }
   });
   gsUpdateUI();
-  // Auto-connect silently if user connected before
+  // On desktop: try silent connect immediately
+  // On iOS/mobile: wait for first user gesture (popup blocked otherwise)
   if (localStorage.getItem(GS_WAS_CONNECTED_KEY)) {
-    gsTokenClient.requestAccessToken({ prompt: '' });
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (!isMobile) {
+      gsTokenClient.requestAccessToken({ prompt: '' });
+    } else {
+      // Connect on first touch
+      const onFirstTouch = () => {
+        document.removeEventListener('touchstart', onFirstTouch);
+        if (!gsAccessToken) gsTokenClient.requestAccessToken({ prompt: '' });
+      };
+      document.addEventListener('touchstart', onFirstTouch, { once: true });
+    }
   }
 }
 window.addEventListener('load', () => { setTimeout(gsInit, 1500); });
