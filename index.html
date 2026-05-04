@@ -166,12 +166,10 @@
     .icon-btn:active { background: var(--gray-1); }
     .icon-btn.del { color: var(--red); }
 
-    /* ─── FAB ─── */
+    /* ─── FAB group ─── */
+    #fab-group { touch-action: none; }
+    #fab-group .fab { flex: 1; justify-content: center; max-width: 160px; }
     .fab {
-      position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: 72px;
       background: var(--green);
       color: var(--white);
       border: none;
@@ -181,12 +179,12 @@
       font-weight: 700;
       box-shadow: var(--shadow-lg);
       cursor: pointer;
-      z-index: 20;
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
     }
-    .fab:active { background: var(--green-dark); transform: translateX(-50%) scale(0.97); }
+    .fab:active { background: var(--green-dark); transform: scale(0.97); }
 
     /* ─── Modal / Drawer ─── */
     .overlay {
@@ -854,11 +852,17 @@
 
 </div>
 
-<!-- FAB -->
-<button class="fab" id="fab-btn">
-  <span id="fab-icon">+</span>
-  <span id="fab-label">ביקור חדש</span>
-</button>
+<!-- FAB group -->
+<div id="fab-group" style="position:fixed;bottom:72px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:10px;z-index:20;pointer-events:none">
+  <button class="fab" id="fab-voice-btn" style="position:relative;bottom:auto;left:auto;right:auto;transform:none;pointer-events:auto" onclick="openVoiceVisitModal()">
+    <span>🎤</span>
+    <span>הקלט פגישה</span>
+  </button>
+  <button class="fab" id="fab-btn" style="position:relative;bottom:auto;left:auto;right:auto;transform:none;pointer-events:auto">
+    <span id="fab-icon">+</span>
+    <span id="fab-label">ביקור חדש</span>
+  </button>
+</div>
 
 <!-- ═══ DRAWER: Visit Form ═══ -->
 <div class="overlay" id="overlay-visit">
@@ -1136,9 +1140,10 @@
     </div>
 
     <!-- instruction -->
-    <div id="vv-instruction" style="font-size:0.82rem;color:var(--gray-4);background:var(--green-pale);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5">
-      דבר בעברית ותאר את הביקור: <b>שם הלקוח, כתובת, מה בוצע, סכום, שעות</b>.<br>
-      <span style="color:var(--gray-3)">לדוגמה: "ביקרתי אצל משה כהן ברחוב הרצל 5 תל אביב, ביצעתי גיזום וריסוס, חייבתי 400 שקל, עבדתי שעתיים"</span>
+    <div id="vv-instruction" style="font-size:0.82rem;color:var(--gray-4);background:var(--green-pale);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.6">
+      דבר בעברית ותאר את הפגישה — המערכת תמלא את הטופס אוטומטית.<br>
+      <b>כלול:</b> שם לקוח · כתובת · תאריך · מה בוצע · סכום · שעות · סכום שנגבה<br>
+      <span style="color:var(--gray-3);font-size:0.78rem">לדוגמה: "היום ביקרתי אצל דוד לוי ברחוב הרצל 12 תל אביב, ביצעתי גיזום וריסוס, עבדתי שעתיים, חייבתי 450 שקל וגביתי 450"</span>
     </div>
 
     <!-- transcript textarea -->
@@ -1583,8 +1588,10 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.012';
+const APP_VERSION   = '01.01.013';
 const CHANGELOG = [
+  { v: '01.01.013', date: '2026-05-04', notes: ['כפתור הקלט פגישה במסך יומן עבודה', 'שיפור ניתוח קולי: יום בשבוע, שעת התחלה, גביתי הכל, שעה וחצי'] },
+  { v: '01.01.012', date: '2026-04-30', notes: ['תיקון תפריט iOS בלחיצה ארוכה בלוח שנה', 'תיקון הבהוב בסימון בלוק כחול', 'תיקון חצי ניווט יורדים שורה בתאריכים דו-ספרתיים', 'תיקון פריסת שדות טופס ביקור ב-iOS', 'כפתור Waze בשורת תווית הכתובת'] },
   { v: '01.01.010', date: '2026-04-29', notes: ['הזנת ביקור מהקלטה קולית — פענוח אוטומטי ומילוי טופס'] },
   { v: '01.01.009', date: '2026-04-29', notes: ['כפתור הגדרות רק במסך יומן עבודה', 'עמודת "מה בוצע" בכל ייצוא דוח', 'ייבוא ביקורים מ-Excel / CSV'] },
   { v: '01.01.008', date: '2026-04-29', notes: ['כפתור ניקוי כל הפילטרים', 'שמירת גיבוי לתיקייה מקומית בטלפון', 'הצגת GinApp במסך הפתיחה'] },
@@ -1697,7 +1704,7 @@ function navigate(screen) {
   const fabLabel = document.getElementById('fab-label');
 
   document.getElementById('settings-btn').style.display  = screen === 'visits' ? '' : 'none';
-  // voice-visit-btn removed
+  document.getElementById('fab-voice-btn').style.display = screen === 'visits' ? '' : 'none';
 
   if (screen === 'visits') {
     topbar.textContent = 'יומן עבודה';
@@ -3148,16 +3155,16 @@ function toggleVVRecording() {
 function parseVisitFromText(text) {
   const t = text.trim();
   const result = {
-    customerName: '', address: '', date: '', revenue: null,
-    collected: null, expenses: null, hours: null, notes: '', warnings: []
+    customerName: '', address: '', date: '', startTime: '',
+    revenue: null, collected: null, expenses: null, hours: null,
+    notes: '', warnings: []
   };
 
   // ── Customer name ──
-  // patterns: "אצל X", "של X", "לקוח X", "ל X"  followed by 2–4 Hebrew words
   const custPatterns = [
-    /אצל\s+([א-ת\s"']{3,40}?)(?:\s+ב(?:רחוב|כתובת|שכונת|דרך|גבעת|כפר|רמת|קרית)|[,.\s]|$)/,
-    /לקוח\s+([א-ת\s"']{3,40}?)(?:\s+ב(?:רחוב|כתובת)|[,.\s]|$)/,
-    /של\s+([א-ת\s"']{3,40}?)(?:\s+ב(?:רחוב|כתובת)|[,.\s]|$)/,
+    /(?:אצל|ביקרתי\s+אצל|פגישה\s+עם|פגשתי\s+את)\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת|שכונת|דרך|גבעת|כפר|רמת|קרית|נווה|גן)|[,.]|$)/,
+    /לקוח(?:\s+בשם)?\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת)|[,.]|$)/,
+    /של\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת)|[,.]|$)/,
   ];
   for (const p of custPatterns) {
     const m = t.match(p);
@@ -3165,18 +3172,35 @@ function parseVisitFromText(text) {
   }
 
   // ── Address ──
-  // "ברחוב X", "בכתובת X", "בדרך X", "בשכונת X", "בכפר X", etc.
-  const addrMatch = t.match(/ב(?:רחוב|כתובת|דרך|שכונת|גבעת|כפר|רמת|קרית|נווה|גן)\s+([א-ת\s\d"'\/\-]{3,60}?)(?:[,.]|(?:\s+ביצע|\s+עשה|\s+טיפל|\s+חייב|\s+גבה|\s+עבד|\s+זה)|$)/);
+  const addrMatch = t.match(/ב(?:רחוב|כתובת|דרך|שכונת|גבעת|כפר|רמת|קרית|נווה|גן)\s+([א-ת\s\d"'\/\-]{3,60}?)(?=[,.]|\s+(?:ביצע|עשה|טיפל|חייב|גבה|עבד|היום|אתמול|בתאריך|שעה)|$)/);
   if (addrMatch) result.address = addrMatch[1].trim();
 
   // ── Date ──
   const todayDate = new Date();
   const todayStr  = todayDate.toISOString().substring(0, 10);
-  if (/היום/.test(t))    result.date = todayStr;
-  if (/אתמול/.test(t)) {
+  const DAYS_HE = { 'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6 };
+  if (/היום/.test(t)) {
+    result.date = todayStr;
+  } else if (/אתמול/.test(t)) {
     const d = new Date(todayDate); d.setDate(d.getDate() - 1);
     result.date = d.toISOString().substring(0, 10);
+  } else if (/שלשום/.test(t)) {
+    const d = new Date(todayDate); d.setDate(d.getDate() - 2);
+    result.date = d.toISOString().substring(0, 10);
+  } else {
+    // "ביום שני", "ביום חמישי"
+    const dayMatch = t.match(/ביום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/);
+    if (dayMatch) {
+      const target = DAYS_HE[dayMatch[1]];
+      const d = new Date(todayDate);
+      const cur = d.getDay();
+      let diff = cur - target;
+      if (diff <= 0) diff += 7;
+      d.setDate(d.getDate() - diff);
+      result.date = d.toISOString().substring(0, 10);
+    }
   }
+  // explicit numeric date overrides
   const dateMatch = t.match(/(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/);
   if (dateMatch) {
     const y = dateMatch[3] ? (dateMatch[3].length === 2 ? '20'+dateMatch[3] : dateMatch[3]) : todayDate.getFullYear();
@@ -3184,53 +3208,70 @@ function parseVisitFromText(text) {
   }
   if (!result.date) result.date = todayStr;
 
+  // ── Start time ──
+  const timeMatch = t.match(/(?:בשעה|החל מ(?:שעה)?|התחלתי ב(?:שעה)?)\s*(\d{1,2}):?(\d{2})?/);
+  if (timeMatch) {
+    const hh = timeMatch[1].padStart(2,'0');
+    const mm = (timeMatch[2] || '00').padStart(2,'0');
+    result.startTime = `${hh}:${mm}`;
+  }
+
   // ── Revenue ──
-  const revMatch = t.match(/(?:חייבתי|חיוב|עלות|מחיר|קיבלתי|מחירה|סכום)[^\d]*(\d+(?:[.,]\d+)?)/);
+  const revMatch = t.match(/(?:חייבתי|חיוב|עלות|מחיר|מחירה|התשלום|הסכום)[^\d]*(\d+(?:[.,]\d+)?)/);
   if (revMatch) result.revenue = parseFloat(revMatch[1].replace(',', '.'));
   else {
+    // "450 שקל" / "450₪" — first occurrence before "גביתי/נגבה"
     const numMatch = t.match(/(\d{2,5})\s*(?:שקל|₪|ש["״]ח)/);
     if (numMatch) result.revenue = parseFloat(numMatch[1]);
   }
 
   // ── Collected ──
-  const collMatch = t.match(/(?:נגבה|שולם|גביתי|גבה)[^\d]*(\d+(?:[.,]\d+)?)/);
+  const collMatch = t.match(/(?:נגבה|שולם|גביתי|גבה|קיבלתי)[^\d]*(\d+(?:[.,]\d+)?)/);
   if (collMatch) result.collected = parseFloat(collMatch[1].replace(',', '.'));
+  // "גביתי הכל" / "נגבה הכל" → collected = revenue
+  if (!collMatch && result.revenue && /(?:גביתי|נגבה|שולם)\s+(?:הכל|הכול|את\s+הכל|במלואו)/.test(t))
+    result.collected = result.revenue;
 
   // ── Expenses ──
-  const expMatch = t.match(/(?:הוצאות|הוצא|קניתי|חומרים)[^\d]*(\d+(?:[.,]\d+)?)/);
+  const expMatch = t.match(/(?:הוצאות|הוצא|קניתי|חומרים|עלות\s+חומר)[^\d]*(\d+(?:[.,]\d+)?)/);
   if (expMatch) result.expenses = parseFloat(expMatch[1].replace(',', '.'));
 
   // ── Hours ──
-  if (/שעתיים/.test(t)) result.hours = 2;
-  else if (/שלוש\s+שעות/.test(t)) result.hours = 3;
-  else if (/ארבע\s+שעות/.test(t)) result.hours = 4;
-  else if (/חצי\s+שעה/.test(t)) result.hours = 0.5;
-  else {
+  const hoursMap = [
+    [/שעה\s+וחצי|שעה\s+ומחצה/, 1.5],
+    [/שעתיים\s+וחצי/, 2.5],
+    [/שלוש\s+וחצי\s+שעות/, 3.5],
+    [/שעתיים/, 2],
+    [/שלוש\s+שעות/, 3],
+    [/ארבע\s+שעות/, 4],
+    [/חמש\s+שעות/, 5],
+    [/שש\s+שעות/, 6],
+    [/חצי\s+שעה/, 0.5],
+  ];
+  let foundHours = false;
+  for (const [rx, val] of hoursMap) {
+    if (rx.test(t)) { result.hours = val; foundHours = true; break; }
+  }
+  if (!foundHours) {
     const hrMatch = t.match(/(\d+(?:[.,]\d+)?)\s*שע(?:ות|ה)/);
     if (hrMatch) result.hours = parseFloat(hrMatch[1].replace(',', '.'));
   }
 
-  // ── Notes — extract work description ──
-  const notesPatterns = [
-    /(?:ביצעתי|עשיתי|טיפלתי|בוצע|עשה|ריסוס|גיזום|השקיה|זיבול|נטיעה|כריתה|קצירה|ניקוי|טאטוא|הסרת|הנחת|תיקון)\s*([א-ת\s,וגם+\d]{3,120}?)(?:[,.]|$)/g,
-  ];
+  // ── Notes ──
+  const workVerbs = /(?:ביצעתי|עשיתי|טיפלתי|בוצע|ריסוס|גיזום|השקיה|זיבול|נטיעה|כריתה|קצירה|ניקוי|טאטוא|הסרת|הנחת|תיקון|קירוץ|דישון|עדכון|בדיקת|הכנת)/g;
   const notesParts = [];
-  for (const p of notesPatterns) {
-    let m;
-    while ((m = p.exec(t)) !== null) {
-      const part = m[0].trim().replace(/[,.]$/, '');
-      if (part && !notesParts.includes(part)) notesParts.push(part);
-    }
+  let m;
+  const workRx = /(?:ביצעתי|עשיתי|טיפלתי|בוצע|ריסוס|גיזום|השקיה|זיבול|נטיעה|כריתה|קצירה|ניקוי|טאטוא|הסרת|הנחת|תיקון|קירוץ|דישון)\s*([א-ת\s,וגם+\d]{2,120}?)(?=[,.]|(?:\s+חייב|\s+גבה|\s+עבד|\s+סכום|\s+שקל)|$)/g;
+  while ((m = workRx.exec(t)) !== null) {
+    const part = m[0].trim().replace(/[,.]$/, '');
+    if (part && !notesParts.includes(part)) notesParts.push(part);
   }
   result.notes = notesParts.join(', ') || '';
-
-  // If nothing extracted as notes, use full text as notes hint
   if (!result.notes && !result.customerName) result.notes = t;
 
   // ── Warnings ──
   if (!result.customerName) result.warnings.push('לא זוהה שם לקוח — יש להשלים ידנית');
   if (!result.address)      result.warnings.push('לא זוהתה כתובת');
-  if (!result.revenue)      result.warnings.push('לא זוהה סכום לחיוב');
 
   return result;
 }
@@ -3289,12 +3330,13 @@ function analyzeAndFillVisit() {
     sel.value = customerId;
     sel.dispatchEvent(new Event('change'));
   }
-  if (parsed.address) document.getElementById('v-address').value = parsed.address;
-  if (parsed.date)    document.getElementById('v-date').value    = parsed.date;
-  if (parsed.revenue !== null) document.getElementById('v-revenue').value   = parsed.revenue;
+  if (parsed.address)   document.getElementById('v-address').value    = parsed.address;
+  if (parsed.date)      document.getElementById('v-date').value       = parsed.date;
+  if (parsed.startTime) document.getElementById('v-start-time').value = parsed.startTime;
+  if (parsed.revenue !== null)   document.getElementById('v-revenue').value   = parsed.revenue;
   if (parsed.collected !== null) document.getElementById('v-collected').value = parsed.collected;
-  if (parsed.expenses !== null) document.getElementById('v-expenses').value  = parsed.expenses;
-  if (parsed.hours !== null)    document.getElementById('v-hours').value     = parsed.hours;
+  if (parsed.expenses !== null)  document.getElementById('v-expenses').value  = parsed.expenses;
+  if (parsed.hours !== null)     document.getElementById('v-hours').value     = parsed.hours;
   if (parsed.notes) document.getElementById('v-notes').value = parsed.notes;
 
   // Show warnings banner inside visit form too if customer missing
