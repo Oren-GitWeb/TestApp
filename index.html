@@ -4359,6 +4359,8 @@ let gsPushTimer    = null;
 
 function gsIsSignedIn() { return !!gsAccessToken; }
 
+const GS_WAS_CONNECTED_KEY = 'gs_was_connected';
+
 // Called once GIS library is ready
 function gsInit() {
   if (!window.google?.accounts?.oauth2) return;
@@ -4368,6 +4370,7 @@ function gsInit() {
     callback:  async resp => {
       if (resp.error) { gsUpdateUI(); return; }
       gsAccessToken = resp.access_token;
+      localStorage.setItem(GS_WAS_CONNECTED_KEY, '1');
       gsUpdateUI();
       gsShowSyncIcon('⏳');
       await gsEnsureSpreadsheet();
@@ -4375,19 +4378,23 @@ function gsInit() {
     }
   });
   gsUpdateUI();
+  // Auto-connect silently if user connected before
+  if (localStorage.getItem(GS_WAS_CONNECTED_KEY)) {
+    gsTokenClient.requestAccessToken({ prompt: '' });
+  }
 }
 window.addEventListener('load', () => { setTimeout(gsInit, 1500); });
 
 function gsSignIn()  {
-  if (!gsTokenClient) { showToast('ספריית Google לא נטענה — בדוק חיבור אינטרנט'); return; }
-  gsTokenClient.requestAccessToken({ prompt: 'consent' });
+  if (!gsTokenClient) { alert('ספריית Google לא נטענה — בדוק חיבור אינטרנט'); return; }
+  gsTokenClient.requestAccessToken({ prompt: '' });
 }
 function gsSignOut() {
   if (gsAccessToken) google.accounts.oauth2.revoke(gsAccessToken, () => {});
   gsAccessToken = null;
+  localStorage.removeItem(GS_WAS_CONNECTED_KEY);
   gsUpdateUI();
   gsShowSyncIcon('');
-  showToast('התנתקת מ-Google Sheets');
 }
 
 function gsUpdateUI() {
