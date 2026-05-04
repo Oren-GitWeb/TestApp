@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gardenapp-v6';
+const CACHE_NAME = 'gardenapp-v8';
 const ASSETS = [
   './',
   './index.html',
