@@ -1207,13 +1207,13 @@
     <!-- status -->
     <div id="vv-status" style="font-size:0.8rem;color:var(--gray-3);text-align:center;min-height:20px;margin-bottom:10px"></div>
 
-    <!-- missing fields warning -->
-    <div id="vv-warnings" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 12px;font-size:0.82rem;color:#6d4c00;margin-bottom:12px"></div>
+    <!-- analysis preview / warnings -->
+    <div id="vv-warnings" style="display:none;margin-bottom:12px"></div>
 
     <!-- action buttons -->
     <div style="display:flex;gap:8px">
       <button id="vv-rec-btn" onclick="toggleVVRecording()" class="btn btn-secondary" style="flex:0 0 auto;font-size:1rem;padding:10px 14px">🎤 הקלט</button>
-      <button onclick="analyzeAndFillVisit()" class="btn btn-primary" style="flex:1;font-size:0.9rem">🔍 נתח ומלא טופס ביקור</button>
+      <button id="vv-analyze-btn" onclick="analyzeAndFillVisit()" class="btn btn-primary" style="flex:1;font-size:0.9rem">🔍 נתח</button>
     </div>
   </div>
 </div>
@@ -1640,8 +1640,14 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.022';
+const APP_VERSION   = '01.01.023';
 const CHANGELOG = [
+  { v: '01.01.023', date: '2026-05-06', notes: [
+    'ניתוח קולי: פאנל תצוגה מקדימה לפני מילוי הטופס — מציג לקוח/תאריך/חיוב/הוצאות/הערות',
+    'לקוח שנמצא מוצג בירוק ✓, לקוח חדש מוצג בכתום',
+    'שיפור fuzzy matching: ניקוי תווי Unicode בלתי-נראים, סף הורד ל-35',
+    'זרימה חדשה: נתח → תצוגה מקדימה → אשר ומלא טופס',
+  ]},
   { v: '01.01.022', date: '2026-05-06', notes: ['תיקון מסך הגדרות: גלילה מלאה, אין חיתוך תוכן', 'כפתור Google גמיש לכל רוחב מסך'] },
   { v: '01.01.021', date: '2026-05-06', notes: ['כפתור "בחר מאנשי קשר" מוצג תמיד', 'אם האפליקציה לא מותקנת כ-PWA — הנחיה ברורה כיצד להתקין', 'אם הדפדפן לא תומך כלל — הפניה לייבוא VCF'] },
   { v: '01.01.020', date: '2026-05-06', notes: ['תיקון זיהוי Contacts API ב-iOS — כפתור "בחר מאנשי קשר" מוצג כעת גם באייפון'] },
@@ -3184,6 +3190,8 @@ function openVoiceVisitModal() {
   document.getElementById('vv-status').textContent = '';
   document.getElementById('vv-warnings').style.display = 'none';
   document.getElementById('vv-rec-btn').textContent = '🎤 הקלט';
+  const ab = document.getElementById('vv-analyze-btn');
+  if (ab) { ab.textContent = '🔍 נתח'; ab.onclick = analyzeAndFillVisit; }
   _vvRecording = false;
   document.getElementById('popup-voice-visit').style.display = 'flex';
 }
@@ -3377,7 +3385,12 @@ function parseDateFromSegment(seg, baseDate) {
 }
 
 function parseVisitFromText(text) {
-  const t = text.trim();
+  // Strip invisible Unicode chars iOS/Android speech-to-text may inject
+  // ­ soft-hyphen, ​-‏ ZW-space/non-joiner/joiner/LRM/RLM
+  // ‪-‮ bidi embeddings+overrides, ⁠ word-joiner
+  // ⁦-⁩ bidi isolates, ﻿ BOM
+  const _invis = /[­​‌‍‎‏‪‫‬‭‮⁠⁦⁧⁨⁩﻿]/g;
+  const t = text.trim().replace(_invis, '').replace(/\s+/g, ' ');
   const today = new Date();
   const result = {
     customerName: '', address: '', date: '', startTime: '',
@@ -3524,6 +3537,41 @@ function parseVisitFromText(text) {
   return result;
 }
 
+// Normalize name for fuzzy matching: trim, collapse spaces, strip invisible chars
+function _normName(s) {
+  return s.trim()
+    .replace(/[­​‌‍‎‏‪‫‬‭‮⁠⁦⁧⁨⁩﻿]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+// Fuzzy customer match: returns { customer, score, isNew }
+function _findCustomer(parsedName) {
+  const parsedFull  = _normName(parsedName);
+  const parsedWords = parsedFull.split(' ').filter(w => w.length > 1);
+  let bestMatch = null, bestScore = 0;
+
+  for (const c of customers) {
+    const storedFull  = _normName(c.name);
+    const storedWords = storedFull.split(' ').filter(w => w.length > 1);
+    let score = 0;
+
+    if (storedFull === parsedFull) {
+      score = 100;
+    } else if (storedFull.includes(parsedFull) || parsedFull.includes(storedFull)) {
+      score = 90;
+    } else {
+      const exactWords   = parsedWords.filter(w => storedWords.includes(w));
+      const partialWords = parsedWords.filter(w => storedWords.some(sw => sw.includes(w) || w.includes(sw)));
+      const matchCount   = Math.max(exactWords.length, partialWords.length);
+      score = Math.round(matchCount / Math.max(parsedWords.length, storedWords.length) * 75);
+    }
+    if (score > bestScore) { bestScore = score; bestMatch = c; }
+  }
+
+  if (bestMatch && bestScore >= 35) return { customer: bestMatch, score: bestScore, isNew: false };
+  return { customer: null, score: 0, isNew: true };
+}
+
 function analyzeAndFillVisit() {
   const text = document.getElementById('vv-text').value.trim();
   if (!text) {
@@ -3531,84 +3579,101 @@ function analyzeAndFillVisit() {
     return;
   }
 
-  const parsed   = parseVisitFromText(text);
-  const warnEl   = document.getElementById('vv-warnings');
+  const parsed = parseVisitFromText(text);
 
-  // Show warnings inside modal if missing customer
-  if (parsed.warnings.length) {
-    warnEl.style.display = '';
-    let html = '<b>⚠️ מידע חסר — ניתן להשלים בהמשך הקלטה, בטקסט, או בטופס:</b><ul style="margin:6px 0 0 12px;padding:0">';
-    parsed.warnings.forEach(w => { html += `<li>${w}</li>`; });
-    html += '</ul>';
-    warnEl.innerHTML = html;
-  } else {
-    warnEl.style.display = 'none';
-  }
-
-  // Find or prepare customer — fuzzy word match
-  let customerId = '';
+  // ── Fuzzy match customer ──────────────────────────────────────────────────────
+  let matchedCustomer = null;
+  let willCreateNew   = false;
   if (parsed.customerName) {
-    const normalize = s => s.trim().replace(/\s+/g, ' ');
-    const parsedWords = normalize(parsed.customerName).split(' ').filter(w => w.length > 1);
-
-    let bestMatch = null, bestScore = 0;
-    for (const c of customers) {
-      const storedWords = normalize(c.name).split(' ').filter(w => w.length > 1);
-      const storedFull  = normalize(c.name);
-      const parsedFull  = normalize(parsed.customerName);
-      let score = 0;
-      if (storedFull === parsedFull)                                  score = 100; // exact
-      else if (storedFull.includes(parsedFull) ||
-               parsedFull.includes(storedFull))                       score = 90;  // one contains other
-      else {
-        // word overlap — each parsed word checked against stored words (and vice versa)
-        const exactWords   = parsedWords.filter(w => storedWords.includes(w));
-        const partialWords = parsedWords.filter(w => storedWords.some(s => s.includes(w) || w.includes(s)));
-        const matchCount   = Math.max(exactWords.length, partialWords.length);
-        score = Math.round(matchCount / Math.max(parsedWords.length, storedWords.length) * 75);
-      }
-      if (score > bestScore) { bestScore = score; bestMatch = c; }
-    }
-
-    if (bestMatch && bestScore >= 40) {
-      customerId = bestMatch.id;
-    } else if (parsed.customerName) {
-      // Create new customer inline
-      const newC = {
-        id: 'c' + Date.now() + Math.random().toString(36).slice(2),
-        name: parsed.customerName,
-        address: parsed.address || '',
-        phone: '', contact: '', notes: '',
-        createdAt: new Date().toISOString()
-      };
-      customers.push(newC);
-      save(CUSTOMERS_KEY, customers);
-      customerId = newC.id;
-    }
+    const res = _findCustomer(parsed.customerName);
+    matchedCustomer = res.customer;
+    willCreateNew   = res.isNew;
   }
 
-  // Close voice modal, open visit form pre-filled
-  closeVoiceVisitModal();
-  openVisitForm(); // opens blank form
+  // ── Build preview panel ───────────────────────────────────────────────────────
+  const fmt2 = n => n != null ? '₪' + Number(n).toLocaleString('he-IL') : null;
+  const row  = (icon, label, val, color) => val
+    ? `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid #f0f0f0">
+         <span style="width:22px;text-align:center;flex-shrink:0">${icon}</span>
+         <span style="font-size:0.75rem;color:var(--gray-3);min-width:60px">${label}</span>
+         <span style="font-size:0.85rem;font-weight:600;color:${color||'var(--text)'};flex:1;text-align:right">${val}</span>
+       </div>` : '';
 
-  // Pre-fill fields
+  let custRow;
+  if (!parsed.customerName) {
+    custRow = row('👤','לקוח','לא זוהה ⚠️','var(--orange)');
+  } else if (matchedCustomer) {
+    custRow = row('👤','לקוח',`${matchedCustomer.name} ✓`,'var(--green-dark)');
+  } else {
+    custRow = row('👤','לקוח',`${parsed.customerName} (לקוח חדש)`,'var(--orange)');
+  }
+
+  const previewRows = [
+    custRow,
+    row('📅','תאריך', parsed.date ? parsed.date.split('-').reverse().join('/') : null),
+    row('💰','לחיוב',  fmt2(parsed.revenue)),
+    row('💸','הוצאות', fmt2(parsed.expenses)),
+    row('⏱','שעות',   parsed.hours != null ? parsed.hours + ' שע\'' : null),
+    row('📝','הערות',  parsed.notes ? parsed.notes.substring(0,80) + (parsed.notes.length>80?'…':'') : null),
+    row('📅','ביקור הבא', parsed.nextDate ? parsed.nextDate.split('-').reverse().join('/') : null),
+  ].filter(Boolean).join('');
+
+  const warnEl = document.getElementById('vv-warnings');
+  warnEl.style.display = '';
+  warnEl.innerHTML = `
+    <div style="background:#f8fdf8;border:1px solid var(--green-light);border-radius:10px;padding:10px 12px;margin-bottom:6px">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--green-dark);margin-bottom:6px">🔍 סיכום ניתוח — בדוק לפני אישור:</div>
+      ${previewRows || '<div style="color:var(--gray-3);font-size:0.8rem">לא נמצא מידע</div>'}
+    </div>
+    ${parsed.warnings.length ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#6d4c00">⚠️ ${parsed.warnings.join(' | ')}</div>` : ''}`;
+
+  // ── Confirm button → fill form ────────────────────────────────────────────────
+  const analyzeBtn = document.getElementById('vv-analyze-btn');
+  if (analyzeBtn) {
+    analyzeBtn.textContent = '✅ אשר ומלא טופס';
+    analyzeBtn.onclick = () => _confirmAndFill(parsed, matchedCustomer, willCreateNew);
+  }
+}
+
+function _confirmAndFill(parsed, matchedCustomer, willCreateNew) {
+  // ── Resolve customer ID ───────────────────────────────────────────────────────
+  let customerId = '';
+  if (matchedCustomer) {
+    customerId = matchedCustomer.id;
+  } else if (willCreateNew && parsed.customerName) {
+    const newC = {
+      id: 'c' + Date.now() + Math.random().toString(36).slice(2),
+      name: parsed.customerName,
+      address: parsed.address || '',
+      phone: '', contact: '', notes: '',
+      createdAt: new Date().toISOString()
+    };
+    customers.push(newC);
+    save(CUSTOMERS_KEY, customers);
+    customerId = newC.id;
+  }
+
+  // ── Close voice modal, open visit form ───────────────────────────────────────
+  closeVoiceVisitModal();
+  openVisitForm();
+
   if (customerId) {
     const sel = document.getElementById('v-customer');
     sel.value = customerId;
     sel.dispatchEvent(new Event('change'));
   }
-  if (parsed.address)   document.getElementById('v-address').value    = parsed.address;
-  if (parsed.date)      document.getElementById('v-date').value       = parsed.date;
-  if (parsed.startTime) document.getElementById('v-start-time').value = parsed.startTime;
-  if (parsed.revenue !== null)   document.getElementById('v-revenue').value   = parsed.revenue;
-  if (parsed.collected !== null) document.getElementById('v-collected').value = parsed.collected;
-  if (parsed.expenses !== null)  document.getElementById('v-expenses').value  = parsed.expenses;
-  if (parsed.hours !== null)     document.getElementById('v-hours').value     = parsed.hours;
-  if (parsed.notes)     document.getElementById('v-notes').value      = parsed.notes;
-  if (parsed.nextDate)  document.getElementById('v-next-date').value  = parsed.nextDate;
-  if (parsed.nextNotes) document.getElementById('v-next-notes').value = parsed.nextNotes;
+  if (parsed.address)            document.getElementById('v-address').value    = parsed.address;
+  if (parsed.date)               document.getElementById('v-date').value       = parsed.date;
+  if (parsed.startTime)          document.getElementById('v-start-time').value = parsed.startTime;
+  if (parsed.revenue  !== null)  document.getElementById('v-revenue').value    = parsed.revenue;
+  if (parsed.collected !== null) document.getElementById('v-collected').value  = parsed.collected;
+  if (parsed.expenses !== null)  document.getElementById('v-expenses').value   = parsed.expenses;
+  if (parsed.hours    !== null)  document.getElementById('v-hours').value      = parsed.hours;
+  if (parsed.notes)              document.getElementById('v-notes').value      = parsed.notes;
+  if (parsed.nextDate)           document.getElementById('v-next-date').value  = parsed.nextDate;
+  if (parsed.nextNotes)          document.getElementById('v-next-notes').value = parsed.nextNotes;
 
-  // Show warnings banner inside visit form too if customer missing
+  // Show warning banner in form if customer missing
   if (parsed.warnings.length) {
     setTimeout(() => {
       const drawerBody = document.querySelector('#overlay-visit .drawer-body');
@@ -3617,10 +3682,7 @@ function analyzeAndFillVisit() {
       const div = document.createElement('div');
       div.id = 'vv-form-warn';
       div.style.cssText = 'background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 12px;font-size:0.82rem;color:#6d4c00;margin-bottom:12px';
-      let html = '<b>⚠️ יש להשלים פרטים חסרים לפני שמירה:</b><ul style="margin:6px 0 0 12px;padding:0">';
-      parsed.warnings.forEach(w => { html += `<li>${w}</li>`; });
-      html += '</ul>';
-      div.innerHTML = html;
+      div.innerHTML = '<b>⚠️ ' + parsed.warnings.join(' | ') + '</b>';
       drawerBody.insertBefore(div, drawerBody.firstChild);
     }, 150);
   }
