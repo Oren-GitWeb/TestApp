@@ -1065,6 +1065,34 @@
 <input type="file" id="vcf-file-input" accept=".vcf,text/vcard,text/x-vcard" multiple style="display:none" />
 
 <!-- ═══ DRAWER: Visit Detail ═══ -->
+<!-- ═══ POPUP: Onboarding (first run) ═══ -->
+<div id="popup-onboarding" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 12px 48px rgba(0,0,0,0.3);text-align:center">
+    <div style="font-size:2.6rem;margin-bottom:8px">🌿</div>
+    <div style="font-size:1.25rem;font-weight:800;color:var(--green-dark);margin-bottom:6px">ברוך הבא ל-GinApp</div>
+    <div style="font-size:0.88rem;color:var(--gray-4);line-height:1.7;margin-bottom:20px">
+      יומן עבודה חכם לגנן —<br>
+      ניהול לקוחות, ביקורים וסיכומי הכנסות.
+    </div>
+
+    <div style="background:var(--green-pale);border-radius:14px;padding:16px;margin-bottom:20px;text-align:right">
+      <div style="font-size:0.85rem;font-weight:700;color:var(--green-dark);margin-bottom:10px">☁️ חבר לחשבון Google שלך</div>
+      <div style="font-size:0.8rem;color:var(--gray-4);line-height:1.7;margin-bottom:12px">
+        כדי לשמור את הנתונים שלך בענן ולגשת אליהם מכל מכשיר,
+        חבר את האפליקציה לחשבון Google שלך.<br>
+        <span style="color:var(--green-dark);font-weight:600">הגיליון ייוצר אוטומטית ב-Google Drive שלך.</span>
+      </div>
+      <button onclick="onboardingConnect()" class="btn btn-primary" style="width:100%;font-size:0.95rem;padding:12px">
+        🔗 התחבר עם Google ויצור בסיס נתונים
+      </button>
+    </div>
+
+    <button onclick="onboardingSkip()" style="background:none;border:none;color:var(--gray-3);font-size:0.8rem;cursor:pointer;text-decoration:underline;padding:4px">
+      המשך ללא חיבור לענן (שמירה מקומית בלבד)
+    </button>
+  </div>
+</div>
+
 <!-- ═══ POPUP: Settings ═══ -->
 <div id="popup-settings" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:flex-start;justify-content:flex-end;padding-top:56px;padding-left:12px;padding-right:12px">
   <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
@@ -1113,6 +1141,14 @@
       <input type="file" accept=".csv,.xlsx,.xls" onchange="openImportVisitsModal(event)" style="display:none" />
     </label>
     <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px;margin-top:4px">מייבא ביקורים מקובץ — יוצר לקוחות חדשים אוטומטית</div>
+
+    <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
+
+    <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">ייבוא לקוחות</div>
+    <button onclick="importContactsFromSettings()" class="btn btn-secondary" style="width:100%;margin-bottom:4px">
+      📲 ייבא אנשי קשר מהטלפון
+    </button>
+    <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">בוחר אנשי קשר מספר הטלפון או מקובץ vcf — ייבא כלקוחות חדשים</div>
 
     <hr style="border:none;border-top:1px solid var(--gray-2);margin:16px 0 12px" />
 
@@ -1604,8 +1640,20 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.015';
+const APP_VERSION   = '01.01.019';
 const CHANGELOG = [
+  { v: '01.01.019', date: '2026-05-06', notes: ['מסך קבלת פנים למשתמש חדש — חיבור Google Sheets עם יצירת בסיס נתונים אישי', 'אפשרות "המשך ללא ענן" לשמירה מקומית בלבד', 'מוצג פעם אחת בלבד לאחר מסך הפתיחה'] },
+  { v: '01.01.018', date: '2026-05-06', notes: ['כפתור ייבוא אנשי קשר מהטלפון נוסף למסך הגדרות', 'תמיכה ב-iPhone וב-Android (native picker)', 'תיקון טקסט: הצגת iPhone / Android'] },
+  { v: '01.01.017', date: '2026-05-06', notes: ['ייבוא גיבוי מקומי מסנכרן אוטומטית ל-Google Sheets אם מחובר'] },
+  { v: '01.01.016', date: '2026-05-06', notes: [
+    'שדרוג מנגנון ניתוח הקלטה קולית — זיהוי חכם יותר',
+    'זיהוי לקוח: תמיכה ב"הגעתי ל", "גינת", "משפחת", "הבית של", "לקוח חדש" ועוד',
+    'ניתוח תאריך: תמיכה בכל וריאציות האורדינל (שלישי / השלישי / בשלישי) + חודש הבא / שבוע הבא',
+    'חישוב רווח מרשימת פריטים: "3 עצי ברוש ב-200 שקל כל אחד" → ₪600',
+    'זיהוי הוצאות: תמיכה ב"עלה לי", "עלו לי", "השקעתי", "הוצאתי"',
+    'זיהוי גביה: תמיכה ב"שולם לי", "קיבלתי תשלום", "קיבלתי הכסף"',
+    'הערות: תמיכה בעוד פעלי עבודה (התקנה, בנייה, פיתוח, עקירה, הדברה ועוד)',
+  ]},
   { v: '01.01.015', date: '2026-05-04', notes: ['סנכרון Google Sheets בזמן אמת', 'התחברות עם חשבון Google', 'שמירה אוטומטית לגיליון פרטי ב-Drive'] },
   { v: '01.01.014', date: '2026-05-04', notes: ['תיקון פרסינג תאריך: חודשים עבריים, בעוד X שבועות/חודשים, ב-15 לאפריל', 'פרסינג תאריך ביקור הבא מההקלטה', 'מילוי אוטומטי שדה תאריך ביקור הבא'] },
   { v: '01.01.013', date: '2026-05-04', notes: ['כפתור הקלט פגישה במסך יומן עבודה', 'שיפור ניתוח קולי: יום בשבוע, שעת התחלה, גביתי הכל, שעה וחצי'] },
@@ -2132,18 +2180,39 @@ function restoreBackup(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.visits || !data.customers) { alert('קובץ גיבוי לא תקין'); return; }
-      if (!confirm(`שחזור יחליף את כל הנתונים הקיימים.\n${data.visits.length} ביקורים, ${data.customers.length} לקוחות\nלהמשיך?`)) return;
-      visits = data.visits;
+      const gsConnected = gsIsSignedIn();
+      const confirmMsg = `שחזור יחליף את כל הנתונים הקיימים.\n${data.visits.length} ביקורים, ${data.customers.length} לקוחות` +
+        (gsConnected ? '\n\nהנתונים יועלו גם ל-Google Sheets.' : '') +
+        '\n\nלהמשיך?';
+      if (!confirm(confirmMsg)) return;
+
+      // ── שמירה ב-localStorage ──
+      visits    = data.visits;
       customers = data.customers;
       save(VISITS_KEY, visits);
       save(CUSTOMERS_KEY, customers);
       closeSettings();
       renderVisits();
-      alert('✅ הנתונים שוחזרו בהצלחה');
+
+      // ── סנכרון ל-Google Sheets אם מחובר ──
+      if (gsConnected) {
+        gsShowSyncIcon('⏳');
+        try {
+          await gsEnsureSpreadsheet();
+          await gsPushToSheets();
+          gsShowSyncIcon('☁️✓', 3000);
+          alert('✅ הנתונים שוחזרו והועלו ל-Google Sheets בהצלחה');
+        } catch(err) {
+          gsShowSyncIcon('⚠️', 4000);
+          alert('✅ הנתונים שוחזרו מקומית, אך העלאה ל-Google Sheets נכשלה.\nניתן לסנכרן ידנית מהגדרות.');
+        }
+      } else {
+        alert('✅ הנתונים שוחזרו בהצלחה');
+      }
     } catch(err) {
       alert('שגיאה בקריאת הקובץ');
     }
@@ -3172,37 +3241,80 @@ function toggleVVRecording() {
 // ── Parser ────────────────────────────────────────────────────────────────────
 const HE_MONTHS = { ינואר:1,פברואר:2,'מרץ':3,'מרס':3,אפריל:4,מאי:5,יוני:6,יולי:7,אוגוסט:8,ספטמבר:9,אוקטובר:10,נובמבר:11,דצמבר:12 };
 const HE_DAY_NAMES = { ראשון:0,שני:1,שלישי:2,רביעי:3,חמישי:4,שישי:5,שבת:6 };
-const HE_NUMS   = { אחד:1,שניים:2,שלושה:3,ארבעה:4,חמישה:5,שישה:6,שבעה:7,שמונה:8,תשעה:9,עשרה:10,
-                    אחת:1,שתיים:2,שלש:3,ארבע:4,חמש:5,שש:6,שבע:7,שמונה:8,תשע:9,עשר:10 };
+const HE_NUMS = {
+  אחד:1,שניים:2,שלושה:3,ארבעה:4,חמישה:5,שישה:6,שבעה:7,שמונה:8,תשעה:9,עשרה:10,
+  אחת:1,שתיים:2,שלש:3,ארבע:4,חמש:5,שש:6,שבע:7,שמונה:8,תשע:9,עשר:10,
+  שתי:2,שני:2,שלוש:3,ארבעים:40,חמישים:50,שישים:60,שבעים:70,שמונים:80,תשעים:90
+};
+
+// Bare ordinal words (without ה/ב prefix) → day number 1–31
+const HE_BARE_ORDINALS = {
+  ראשון:1,שני:2,שלישי:3,רביעי:4,חמישי:5,שישי:6,שביעי:7,שמיני:8,תשיעי:9,עשירי:10,
+  'אחד עשר':11,'שניים עשר':12,'שלושה עשר':13,'ארבעה עשר':14,'חמישה עשר':15,
+  'שישה עשר':16,'שבעה עשר':17,'שמונה עשר':18,'תשעה עשר':19,'עשרים':20,
+  'עשרים ואחד':21,'עשרים ושניים':22,'עשרים ושלושה':23,'עשרים וארבעה':24,
+  'עשרים וחמישה':25,'עשרים ושישה':26,'עשרים ושבעה':27,'עשרים ושמונה':28,
+  'עשרים ותשעה':29,'שלושים':30,'שלושים ואחד':31
+};
+// With ה prefix (backward compatibility)
+const HE_ORDINALS = Object.fromEntries(Object.entries(HE_BARE_ORDINALS).map(([k,v])=>['ה'+k,v]));
+// Month ordinals: חמישי = 5th month = May, etc.
+const HE_MONTH_ORDINALS = { ראשון:1,שני:2,שלישי:3,רביעי:4,חמישי:5,שישי:6,שביעי:7,שמיני:8,תשיעי:9,עשירי:10 };
+
+// ── Itemized cost parser ──────────────────────────────────────────────────────
+// Detects patterns like "3 עצי ברוש ב-200 שקל" and computes qty × price
+function parseItemizedAmount(text) {
+  const resolveQty = s => {
+    const n = parseInt(s);
+    if (!isNaN(n)) return n;
+    const m = { אחד:1,אחת:1,שניים:2,שתיים:2,שתי:2,שני:2,
+                שלושה:3,שלוש:3,ארבעה:4,ארבע:4,חמישה:5,חמש:5,
+                שישה:6,שש:6,שבעה:7,שבע:7,שמונה:8,תשעה:9,תשע:9,
+                עשרה:10,עשר:10,עשרים:20,שלושים:30,ארבעים:40,חמישים:50 };
+    return m[s] || 1;
+  };
+  // Pattern: [qty] [description words] ב-[price] [optional per-unit phrase]
+  const itemRx = /(\d+|אחד|אחת|שניים?|שתיים?|שתי|שלוש(?:ה)?|ארבע(?:ה)?|חמש(?:ה)?|שש(?:ה)?|שבע(?:ה)?|שמונה|תשע(?:ה)?|עשר(?:ה)?|עשרים|שלושים|ארבעים|חמישים)\s+([א-ת][א-ת\s'"]{1,40}?)\s+ב["\-]?(\d+(?:[.,]\d+)?)\s*(?:שקל|₪|ש["״]ח)?(?:\s+(?:לאחד|כל\s+אחד|למטר|למ"ר|לפריט|ליחידה|לעץ|לשיח|לצמח|לקוב))?/g;
+  const items = [];
+  let m;
+  while ((m = itemRx.exec(text)) !== null) {
+    const qty   = resolveQty(m[1]);
+    const desc  = m[2].trim();
+    const price = parseFloat(m[3].replace(',','.'));
+    if (qty > 0 && price > 0) items.push({ desc, qty, unitPrice: price, total: qty * price });
+  }
+  const total = items.reduce((s,i) => s + i.total, 0);
+  return { total: Math.round(total * 100) / 100, items };
+}
 
 function parseDateFromSegment(seg, baseDate) {
-  // Returns ISO date string or '' — parses a text segment for a date
   const s = seg.trim();
   const today = baseDate || new Date();
   const toISO = d => d.toISOString().substring(0,10);
 
-  // relative
-  if (/היום/.test(s))    return toISO(today);
-  if (/אתמול/.test(s))   { const d=new Date(today); d.setDate(d.getDate()-1); return toISO(d); }
-  if (/שלשום/.test(s))   { const d=new Date(today); d.setDate(d.getDate()-2); return toISO(d); }
+  // ── Relative ──────────────────────────────────────────────────────────────────
+  if (/היום/.test(s))  return toISO(today);
+  if (/אתמול/.test(s)) { const d=new Date(today); d.setDate(d.getDate()-1); return toISO(d); }
+  if (/שלשום/.test(s)) { const d=new Date(today); d.setDate(d.getDate()-2); return toISO(d); }
 
-  // "בעוד X ימים/שבועות/חודשים"
+  // ── "בעוד X ימים/שבועות/חודשים" ──────────────────────────────────────────────
   const futureMatch = s.match(/בעוד\s+(\d+|אחד|שניים|שלושה|ארבעה|חמישה|שישה|שבעה|שמונה|תשעה|עשרה|אחת|שתיים|שלש|ארבע|חמש|שש|שבע|תשע|עשר)\s*(ימים?|שבועות?|חודשים?)/);
   if (futureMatch) {
     const n = parseInt(futureMatch[1]) || HE_NUMS[futureMatch[1]] || 1;
     const unit = futureMatch[2];
     const d = new Date(today);
-    if (/יום|ימים/.test(unit))    d.setDate(d.getDate() + n);
+    if (/יום|ימים/.test(unit))         d.setDate(d.getDate() + n);
     else if (/שבוע|שבועות/.test(unit)) d.setDate(d.getDate() + n*7);
     else if (/חודש|חודשים/.test(unit)) d.setMonth(d.getMonth() + n);
     return toISO(d);
   }
 
-  // "שבועיים" = 2 weeks, "שלושה שבועות"
-  if (/שבועיים/.test(s))      { const d=new Date(today); d.setDate(d.getDate()+14); return toISO(d); }
-  if (/חודש\s+הבא|חודש הבא/.test(s)) { const d=new Date(today); d.setMonth(d.getMonth()+1); return toISO(d); }
+  // ── "שבועיים" / "שבוע הבא" / "חודש הבא" ──────────────────────────────────────
+  if (/שבועיים/.test(s))               { const d=new Date(today); d.setDate(d.getDate()+14); return toISO(d); }
+  if (/שבוע\s+הבא/.test(s))            { const d=new Date(today); d.setDate(d.getDate()+7);  return toISO(d); }
+  if (/חודש\s+הבא|חודש הבא/.test(s))   { const d=new Date(today); d.setMonth(d.getMonth()+1); return toISO(d); }
 
-  // "ביום ראשון/שני..." → previous occurrence (for visit date) or next (for next date)
+  // ── "ביום ראשון/שני/..." → last occurrence ────────────────────────────────────
   const dayMatch = s.match(/ביום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/);
   if (dayMatch) {
     const target = HE_DAY_NAMES[dayMatch[1]];
@@ -3213,25 +3325,44 @@ function parseDateFromSegment(seg, baseDate) {
     return toISO(d);
   }
 
-  // "ב-15 לאפריל" / "ב15 באפריל" / "ב-15 ב-מאי"
+  // ── "ב-15 לאפריל" / "ב15 באפריל" ────────────────────────────────────────────
   const heMonthMatch = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב["\-]?)?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)/);
   if (heMonthMatch) {
     const day = parseInt(heMonthMatch[1]);
     const mon = HE_MONTHS[heMonthMatch[2]] - 1;
     const yr  = today.getFullYear();
     const d   = new Date(yr, mon, day);
-    if (d < today) d.setFullYear(yr+1); // future: next year
+    if (d < today) d.setFullYear(yr+1);
     return toISO(d);
   }
 
-  // "ב-15 לחודש" / "ב-15 בחודש"
+  // ── Ordinal day + month ───────────────────────────────────────────────────────
+  // Handles ALL forms: "השלישי לחמישי" / "שלישי לחמישי" / "בעשירי למאי" / "העשירי ליוני"
+  // Optional ה or ב prefix before bare ordinal word, then ל/ב + month name or month ordinal
+  const _mNames    = 'ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר';
+  const _mOrdNames = 'ראשון|שני|שלישי|רביעי|חמישי|שישי|שביעי|שמיני|תשיעי|עשירי';
+  const _bareOrdKeys = Object.keys(HE_BARE_ORDINALS).sort((a,b)=>b.length-a.length).join('|');
+  // (?:[הב])? captures optional definite/preposition prefix; bare ordinal key is captured in group 1
+  const ordMonthRx = new RegExp(`(?:[הב])?(${_bareOrdKeys})\\s+(?:ל|ב(?!רחוב|כתובת|שכונת|דרך|גן\\b))(${_mNames}|${_mOrdNames})`);
+  const ordMonthMatch = s.match(ordMonthRx);
+  if (ordMonthMatch) {
+    const day    = HE_BARE_ORDINALS[ordMonthMatch[1]];
+    const monWord = ordMonthMatch[2];
+    const mon = (HE_MONTHS[monWord] || HE_MONTH_ORDINALS[monWord] || 1) - 1;
+    const yr  = today.getFullYear();
+    const d   = new Date(yr, mon, day);
+    if (d < today) d.setFullYear(yr+1);
+    return toISO(d);
+  }
+
+  // ── "ב-15 לחודש" / "ב-15 בחודש" ─────────────────────────────────────────────
   const dayOfMonthMatch = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב)חודש/);
   if (dayOfMonthMatch) {
     const d = new Date(today); d.setDate(parseInt(dayOfMonthMatch[1]));
     return toISO(d);
   }
 
-  // numeric: "15/4", "15.4.2026", "15-4"
+  // ── Numeric: "15/4", "15.4.2026", "15-4" ─────────────────────────────────────
   const numMatch = s.match(/(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/);
   if (numMatch) {
     const day = parseInt(numMatch[1]), mon = parseInt(numMatch[2])-1;
@@ -3251,68 +3382,111 @@ function parseVisitFromText(text) {
     notes: '', nextDate: '', nextNotes: '', warnings: []
   };
 
-  // ── Split into "this visit" vs "next visit" sections ──
-  const nextSplit = t.search(/(?:הביקור\s+הבא|הפגישה\s+הבאה|ביקור\s+הבא|פגישה\s+הבאה|הפעם\s+הבאה)/);
+  // ── Split: this visit | next visit ───────────────────────────────────────────
+  const nextSplit = t.search(/(?:הביקור\s+הבא|הפגישה\s+הבאה|ביקור\s+הבא|פגישה\s+הבאה|הפעם\s+הבאה|תאריך\s+פגישה\s+הבאה|הגעה\s+הבאה)/);
   const visitText = nextSplit > -1 ? t.substring(0, nextSplit) : t;
   const nextText  = nextSplit > -1 ? t.substring(nextSplit)    : '';
 
-  // ── Customer name ──
+  // ── Customer name ─────────────────────────────────────────────────────────────
+  // Lookahead stops name capture at: address-prefix / punctuation / action/meta-words / amounts
+  const nameEnd =
+    `(?=\\s+ב(?:רחוב|כתובת|שכונת|דרך|גבעת|כפר|רמת|קרית|נווה|גן|שכונה)|[,.]|$` +
+    `|\\s+(?:ו?ביצע|ו?עשה|ו?טיפל|ו?חייב|ו?גבה|ו?עבד|ו?הגע|ו?הייתי` +
+    `|ו?ביצעתי|ו?עשיתי|ו?טיפלתי|ו?חייבתי|ו?גביתי|ו?עבדתי|ו?חויב|ו?קיבלתי|ו?נסעתי` +
+    `|היום|אתמול|שלשום|תאריך|הלקוח|הלקוחה|הוצאות|מה\\s+שבוצע|מה\\s+בוצע` +
+    `|בשעה|החל|בתאריך|הגינה|הנכס|הבית|השבוע|החודש|סכום|תשלום|שקל|₪` +
+    `|ביצעתי|עשיתי|שתלתי|נטעתי|גיזמתי|ריססתי|קצרתי|ניקיתי|הסרתי|הנחתי|דישנתי))`;
+  const nameCapture = `([א-ת][א-ת\\s"']{1,35}?)${nameEnd}`;
+
   const custPatterns = [
-    /(?:אצל|ביקרתי\s+אצל|פגישה\s+עם|פגשתי\s+את)\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת|שכונת|דרך|גבעת|כפר|רמת|קרית|נווה|גן)|[,.]|$)/,
-    /לקוח(?:\s+בשם)?\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת)|[,.]|$)/,
-    /של\s+([א-ת][א-ת\s"']{2,35}?)(?:\s+ב(?:רחוב|כתובת)|[,.]|$)/,
+    // "ביקרתי/הייתי/עבדתי/פגשתי... אצל [שם]"
+    new RegExp(`(?:ביקרתי\\s+אצל|הייתי\\s+אצל|פגשתי\\s+את|פגישה\\s+עם|עבדתי\\s+אצל|טיפלתי\\s+אצל|הגעתי\\s+אצל|נסעתי\\s+אצל)\\s+${nameCapture}`),
+    // "אצל משפחת [שם]" / "אצל [שם]"
+    new RegExp(`(?:אצל\\s+משפחת|אצל)\\s+${nameCapture}`),
+    // "לקוח / לקוחה [בשם / חדש / חדשה] [שם]"
+    new RegExp(`לקוח(?:ה)?(?:\\s+(?:בשם|חדש(?:ה)?))?\\s+${nameCapture}`),
+    // "הגעתי ל[שם]" / "נסעתי ל[שם]" / "הלכתי ל[שם]"
+    new RegExp(`(?:הגעתי\\s+ל|נסעתי\\s+ל|הלכתי\\s+ל)${nameCapture}`),
+    // "גינת/גינה של / הגינה של / הבית של / הנכס של [שם]"
+    new RegExp(`(?:גינת|גינה\\s+של|הגינה\\s+של|בית\\s+של|הבית\\s+של|נכס\\s+של|הנכס\\s+של|הגן\\s+של|גן\\s+של)\\s*${nameCapture}`),
+    // "משפחת [שם]"
+    new RegExp(`משפחת\\s+${nameCapture}`),
+    // "של [שם]"
+    new RegExp(`של\\s+${nameCapture}`),
+    // "הייתי/ביקרתי/עבדתי/טיפלתי/הגעתי ב[שם מקום]"
+    new RegExp(`(?:הייתי|ביקרתי|עבדתי|טיפלתי|הגעתי)\\s+ב([א-ת][א-ת\\s"']{1,35}?)${nameEnd}`),
+    // "בגינת [שם]"
+    new RegExp(`בגינת\\s+${nameCapture}`),
   ];
+
   for (const p of custPatterns) {
-    const m = t.match(p);
+    const m = visitText.match(p);
     if (m) { result.customerName = m[1].trim().replace(/\s+/g, ' '); break; }
   }
 
-  // ── Address ──
-  const addrMatch = t.match(/ב(?:רחוב|כתובת|דרך|שכונת|גבעת|כפר|רמת|קרית|נווה|גן)\s+([א-ת\s\d"'\/\-]{3,60}?)(?=[,.]|\s+(?:ביצע|עשה|טיפל|חייב|גבה|עבד|היום|אתמול|בתאריך|שעה)|$)/);
+  // ── Address ───────────────────────────────────────────────────────────────────
+  const addrMatch = t.match(/ב(?:רחוב|כתובת|דרך|שכונת|גבעת|כפר|רמת|קרית|נווה|גן)\s+([א-ת\s\d"'\/\-]{3,60}?)(?=[,.]|\s+(?:ביצע|עשה|טיפל|חייב|גבה|עבד|חויב|קיבלתי|היום|אתמול|בתאריך|שעה)|$)/);
   if (addrMatch) result.address = addrMatch[1].trim();
 
-  // ── Visit date (from visitText) ──
+  // ── Visit date ────────────────────────────────────────────────────────────────
   result.date = parseDateFromSegment(visitText, today) || today.toISOString().substring(0,10);
 
-  // ── Next visit date (from nextText) ──
+  // ── Next visit date ───────────────────────────────────────────────────────────
   if (nextText) {
     result.nextDate = parseDateFromSegment(nextText, today);
-    // next visit notes = everything after the date keyword
-    const noteAfter = nextText.replace(/(?:הביקור\s+הבא|הפגישה\s+הבאה|ביקור\s+הבא|פגישה\s+הבאה|הפעם\s+הבאה)/, '').trim();
-    result.nextNotes = noteAfter.replace(/(?:בעוד\s+\S+\s+\S+|ביום\s+\S+|ב["\-]?\d{1,2}[^\s]*)/,'').trim();
+    const noteAfter = nextText.replace(/(?:הביקור\s+הבא|הפגישה\s+הבאה|ביקור\s+הבא|פגישה\s+הבאה|הפעם\s+הבאה|הגעה\s+הבאה|תאריך\s+פגישה\s+הבאה)/, '').trim();
+    result.nextNotes = noteAfter.replace(/(?:בעוד\s+\S+\s+\S+|ביום\s+\S+|(?:[הב])?(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שביעי|עשירי)\s+(?:ל|ב)\S+|ב["\-]?\d{1,2}[^\s]*)/, '').trim();
   }
 
-  // ── Start time ──
-  const timeMatch = visitText.match(/(?:בשעה|החל מ(?:שעה)?|התחלתי ב(?:שעה)?)\s*(\d{1,2}):?(\d{2})?/);
-  if (timeMatch) {
-    result.startTime = `${timeMatch[1].padStart(2,'0')}:${(timeMatch[2]||'00').padStart(2,'0')}`;
+  // ── Start time ────────────────────────────────────────────────────────────────
+  const timeMatch = visitText.match(/(?:בשעה|החל\s*מ(?:שעה)?|התחלתי\s*ב(?:שעה)?|הגעתי\s*ב(?:שעה)?)\s*(\d{1,2}):?(\d{2})?/);
+  if (timeMatch) result.startTime = `${timeMatch[1].padStart(2,'0')}:${(timeMatch[2]||'00').padStart(2,'0')}`;
+
+  // ── Revenue ───────────────────────────────────────────────────────────────────
+  // Priority 1: explicit charge keywords (search only in visitText to avoid picking up next-visit context)
+  const revKeyRx = /(?:חייבתי(?:\s+את\s+הלקוח(?:ה)?)?|חויב(?:\s+(?:הלקוח(?:ה)?|ב))?|חיוב(?:\s+של)?|התשלום(?:\s+(?:הוא|הסתכם|עמד))?|הסכום(?:\s+(?:הוא|הסתכם))?|מחיר(?:\s+הביקור)?|עלות(?:\s+הביקור)?)[^\d\n]*?(\d[\d,.]*)/;
+  const revMatch = visitText.match(revKeyRx);
+  if (revMatch) {
+    result.revenue = parseFloat(revMatch[1].replace(/,/g,'.'));
+  } else {
+    // Priority 2: itemized list with prices — compute total
+    const itemized = parseItemizedAmount(visitText);
+    if (itemized.total > 0) {
+      result.revenue = itemized.total;
+    } else {
+      // Priority 3: standalone amount — take the largest number followed by ₪/שקל
+      const allAmounts = [...visitText.matchAll(/(\d{2,6}(?:[.,]\d+)?)\s*(?:שקל|₪|ש["״]ח)/g)]
+        .map(m => parseFloat(m[1].replace(',','.')));
+      if (allAmounts.length > 0) result.revenue = Math.max(...allAmounts);
+    }
   }
 
-  // ── Revenue ──
-  const revMatch = t.match(/(?:חייבתי|חיוב|עלות|מחיר|מחירה|התשלום|הסכום)[^\d]*(\d+(?:[.,]\d+)?)/);
-  if (revMatch) result.revenue = parseFloat(revMatch[1].replace(',','.'));
-  else {
-    const numMatch = t.match(/(\d{2,5})\s*(?:שקל|₪|ש["״]ח)/);
-    if (numMatch) result.revenue = parseFloat(numMatch[1]);
-  }
-
-  // ── Collected ──
-  const collMatch = t.match(/(?:נגבה|שולם|גביתי|גבה|קיבלתי)[^\d]*(\d+(?:[.,]\d+)?)/);
-  if (collMatch) result.collected = parseFloat(collMatch[1].replace(',','.'));
-  if (!collMatch && result.revenue && /(?:גביתי|נגבה|שולם)\s+(?:הכל|הכול|את\s+הכל|במלואו)/.test(t))
+  // ── Collected (amount actually paid) ─────────────────────────────────────────
+  const collMatch = t.match(/(?:נגבה|גביתי|שולם\s+לי|קיבלתי\s+(?:תשלום\s+של\s+|תשלום\s+)?)[^\d\n]*?(\d[\d,.]*)/);
+  if (collMatch) result.collected = parseFloat(collMatch[1].replace(/,/g,'.'));
+  else if (!collMatch && result.revenue && /(?:גביתי|נגבה|שולם|קיבלתי)\s+(?:הכל|הכול|את\s+הכל|במלואו|הכסף|את\s+הכסף)/.test(t))
     result.collected = result.revenue;
 
-  // ── Expenses ──
-  const expMatch = t.match(/(?:הוצאות|הוצא|קניתי|חומרים|עלות\s+חומר)[^\d]*(\d+(?:[.,]\d+)?)/);
-  if (expMatch) result.expenses = parseFloat(expMatch[1].replace(',','.'));
+  // ── Expenses ──────────────────────────────────────────────────────────────────
+  const expRx = /(?:הוצאות(?:\s+שלי)?|ההוצאה(?:\s+שלי)?|הוצאה\s+שלי|הוצאתי|קניתי\s+(?:חומרים?|ציוד|חומר)?|חומרים(?:\s+עלו)?|עלות\s+(?:חומרים?|ציוד|חומר)|השקעתי|עלה\s+לי|עלו\s+לי)[^\d\n]*?(\d[\d,.]*)/;
+  const expMatch = t.match(expRx);
+  if (expMatch) result.expenses = parseFloat(expMatch[1].replace(/,/g,'.'));
 
-  // ── Hours ──
+  // ── Hours ─────────────────────────────────────────────────────────────────────
   const hoursMap = [
-    [/שעה\s+וחצי|שעה\s+ומחצה/, 1.5], [/שעתיים\s+וחצי/, 2.5],
-    [/שלוש\s+וחצי\s+שעות/, 3.5],     [/שעתיים/, 2],
-    [/שלוש\s+שעות/, 3],               [/ארבע\s+שעות/, 4],
-    [/חמש\s+שעות/, 5],                [/שש\s+שעות/, 6],
     [/חצי\s+שעה/, 0.5],
+    [/שעה\s+(?:וחצי|ומחצה)/, 1.5],
+    [/שעה\s+(?:אחת|בדיוק)?(?!\s+ו)/, 1],
+    [/שעתיים\s+(?:וחצי|ומחצה)/, 2.5],
+    [/שעתיים/, 2],
+    [/שלוש\s+וחצי\s+שעות/, 3.5],
+    [/שלוש\s+שעות/, 3],
+    [/ארבע\s+(?:וחצי\s+)?שעות/, 4.5],
+    [/ארבע\s+שעות/, 4],
+    [/חמש\s+שעות/, 5],
+    [/שש\s+שעות/, 6],
+    [/שבע\s+שעות/, 7],
+    [/שמונה\s+שעות/, 8],
   ];
   let foundHours = false;
   for (const [rx, val] of hoursMap) { if (rx.test(t)) { result.hours=val; foundHours=true; break; } }
@@ -3321,18 +3495,26 @@ function parseVisitFromText(text) {
     if (hrMatch) result.hours = parseFloat(hrMatch[1].replace(',','.'));
   }
 
-  // ── Notes ──
-  const notesParts = [];
-  let m;
-  const workRx = /(?:ביצעתי|עשיתי|טיפלתי|בוצע|ריסוס|גיזום|השקיה|זיבול|נטיעה|כריתה|קצירה|ניקוי|טאטוא|הסרת|הנחת|תיקון|קירוץ|דישון)\s*([א-ת\s,וגם+\d]{2,120}?)(?=[,.]|(?:\s+חייב|\s+גבה|\s+עבד|\s+סכום|\s+שקל)|$)/g;
-  while ((m = workRx.exec(visitText)) !== null) {
-    const part = m[0].trim().replace(/[,.]$/,'');
-    if (part && !notesParts.includes(part)) notesParts.push(part);
+  // ── Notes (work performed) ────────────────────────────────────────────────────
+  // Priority 1: explicit section marker
+  const explicitNoteRx = /(?:מה\s+שבוצע|מה\s+בוצע|מה\s+שנעשה|העבודה(?:\s+שבוצעה)?|ביצעתי\s*:|בוצע\s*:|פירוט(?:\s+עבודה)?)\s*[:\-]?\s*([\s\S]{3,400}?)(?=\s*(?:חייבתי|חויב|הוצאות|ההוצאה|תאריך\s+פגישה|הביקור\s+הבא|הפגישה\s+הבאה|$))/;
+  const explicitNotesM = visitText.match(explicitNoteRx);
+  if (explicitNotesM) {
+    result.notes = explicitNotesM[1].trim().replace(/\s+/g,' ');
+  } else {
+    // Priority 2: collect work-verb phrases
+    const notesParts = [];
+    let m2;
+    const workRx = /(?:ביצעתי|עשיתי|טיפלתי|בוצע|ריסוס|גיזום|גיזמתי|השקיה|השקיתי|זיבול|זיבלתי|נטיעה|נטעתי|כריתה|כרתתי|קצירה|קצרתי|ניקוי|ניקיתי|טאטוא|הסרת|הסרתי|הנחת|הנחתי|תיקון|תיקנתי|קירוץ|קירצתי|דישון|דישנתי|שתילה|שתלתי|עיצוב|עיצבתי|פינוי|פיניתי|יישור|ישרתי|הדברה|הדברתי|ריססתי|עקירה|עקרתי|השתלה|השתלתי|גינון|הכנת|הכנה|פיתוח|פיתחתי|בנייה|בניתי|התקנת|התקנה|התקנתי)\s*([א-ת\d\s,וגם+'"]{2,150}?)(?=\s*(?:[,.]|חייבתי|חויב|גביתי|הוצאות|ההוצאה|תאריך|$))/g;
+    while ((m2 = workRx.exec(visitText)) !== null) {
+      const part = m2[0].trim().replace(/[,.]$/,'');
+      if (part && !notesParts.includes(part)) notesParts.push(part);
+    }
+    result.notes = notesParts.join(', ') || '';
   }
-  result.notes = notesParts.join(', ') || '';
   if (!result.notes && !result.customerName) result.notes = t;
 
-  // ── Warnings ──
+  // ── Warnings ──────────────────────────────────────────────────────────────────
   if (!result.customerName) result.warnings.push('לא זוהה שם לקוח — יש להשלים ידנית');
   if (!result.address)      result.warnings.push('לא זוהתה כתובת');
 
@@ -3363,26 +3545,29 @@ function analyzeAndFillVisit() {
   // Find or prepare customer — fuzzy word match
   let customerId = '';
   if (parsed.customerName) {
-    const normalize = s => s.trim().replace(/\s+/g, ' ').toLowerCase();
-    const parsedWords = normalize(parsed.customerName).split(' ').filter(Boolean);
+    const normalize = s => s.trim().replace(/\s+/g, ' ');
+    const parsedWords = normalize(parsed.customerName).split(' ').filter(w => w.length > 1);
 
     let bestMatch = null, bestScore = 0;
     for (const c of customers) {
-      const storedWords = normalize(c.name).split(' ').filter(Boolean);
+      const storedWords = normalize(c.name).split(' ').filter(w => w.length > 1);
       const storedFull  = normalize(c.name);
       const parsedFull  = normalize(parsed.customerName);
       let score = 0;
       if (storedFull === parsedFull)                                  score = 100; // exact
       else if (storedFull.includes(parsedFull) ||
-               parsedFull.includes(storedFull))                       score = 85;  // one contains other
+               parsedFull.includes(storedFull))                       score = 90;  // one contains other
       else {
-        const matchedWords = parsedWords.filter(w => storedWords.includes(w));
-        score = Math.round(matchedWords.length / Math.max(parsedWords.length, storedWords.length) * 70);
+        // word overlap — each parsed word checked against stored words (and vice versa)
+        const exactWords   = parsedWords.filter(w => storedWords.includes(w));
+        const partialWords = parsedWords.filter(w => storedWords.some(s => s.includes(w) || w.includes(s)));
+        const matchCount   = Math.max(exactWords.length, partialWords.length);
+        score = Math.round(matchCount / Math.max(parsedWords.length, storedWords.length) * 75);
       }
       if (score > bestScore) { bestScore = score; bestMatch = c; }
     }
 
-    if (bestMatch && bestScore >= 50) {
+    if (bestMatch && bestScore >= 40) {
       customerId = bestMatch.id;
     } else if (parsed.customerName) {
       // Create new customer inline
@@ -3967,6 +4152,12 @@ function fmt(n) {
 let pendingImports = [];
 const hasNativePicker = () => 'contacts' in navigator && 'ContactsManager' in window;
 
+// Called from settings — closes settings panel first, then opens import drawer
+function importContactsFromSettings() {
+  closeSettings();
+  setTimeout(() => importContacts(), 200);
+}
+
 function importContacts() {
   // Show method-choice screen inside the drawer
   document.getElementById('import-drawer-title').textContent = 'ייבוא אנשי קשר';
@@ -3981,7 +4172,7 @@ function importContacts() {
         <span style="font-size:1.8rem">📱</span>
         <div>
           <div style="font-weight:700">בחר מאנשי קשר</div>
-          <div style="font-size:0.78rem;color:var(--gray-3)">ישירות מספר הטלפון (Android)</div>
+          <div style="font-size:0.78rem;color:var(--gray-3)">ישירות מספר הטלפון (iPhone / Android)</div>
         </div>
       </button>`;
   }
@@ -4386,6 +4577,30 @@ function gsLoadSavedToken() {
   return false;
 }
 
+// ── Onboarding (first-run) ────────────────────────────────────────────────────
+const GS_ONBOARDING_KEY = 'gs_onboarding_done';
+
+function showOnboarding() {
+  const el = document.getElementById('popup-onboarding');
+  if (el) el.style.display = 'flex';
+}
+
+function closeOnboarding() {
+  const el = document.getElementById('popup-onboarding');
+  if (el) el.style.display = 'none';
+  localStorage.setItem(GS_ONBOARDING_KEY, '1');
+}
+
+function onboardingConnect() {
+  closeOnboarding();
+  // Small delay so the popup closes cleanly before the Google auth popup appears
+  setTimeout(() => gsSignIn(), 200);
+}
+
+function onboardingSkip() {
+  closeOnboarding();
+}
+
 // Called once GIS library is ready
 function gsInit() {
   if (!window.google?.accounts?.oauth2) return;
@@ -4409,9 +4624,12 @@ function gsInit() {
     gsEnsureSpreadsheet().then(() => gsPullFromSheets());
   } else {
     gsUpdateUI();
-    // If was connected before but token expired — try silent refresh
     if (localStorage.getItem(GS_WAS_CONNECTED_KEY)) {
+      // Was connected before — try silent refresh
       gsTokenClient.requestAccessToken({ prompt: '' });
+    } else if (!localStorage.getItem(GS_ONBOARDING_KEY)) {
+      // Brand-new user — show onboarding after splash disappears
+      setTimeout(showOnboarding, 4800);
     }
   }
 }
