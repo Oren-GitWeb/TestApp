@@ -1094,8 +1094,8 @@
 </div>
 
 <!-- ═══ POPUP: Settings ═══ -->
-<div id="popup-settings" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:flex-start;justify-content:flex-end;padding-top:56px;padding-left:12px;padding-right:12px">
-  <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
+<div id="popup-settings" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:flex-start;justify-content:flex-end;padding:56px 12px 12px 12px;overflow-y:auto">
+  <div style="background:#fff;border-radius:16px;padding:20px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.25);max-height:calc(100dvh - 68px);overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-size:1rem;font-weight:700;color:var(--green-dark)">⚙️ הגדרות</div>
       <div style="font-size:0.72rem;color:var(--gray-3);background:var(--gray-1);border-radius:6px;padding:3px 8px;font-family:monospace" id="version-label"></div>
@@ -1103,9 +1103,9 @@
 
     <!-- Google Sheets sync -->
     <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">סנכרון Google Sheets</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <span id="gs-status" style="font-size:0.82rem;font-weight:600">⚪ לא מחובר</span>
-      <button id="gs-signin-btn" onclick="gsSignIn()" class="btn btn-primary" style="flex:0 0 auto;font-size:0.82rem;padding:7px 14px">🔗 התחבר עם Google</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span id="gs-status" style="font-size:0.82rem;font-weight:600;flex:1;min-width:80px">⚪ לא מחובר</span>
+      <button id="gs-signin-btn" onclick="gsSignIn()" class="btn btn-primary" style="flex:0 0 auto;font-size:0.78rem;padding:7px 10px;white-space:nowrap">🔗 התחבר עם Google</button>
     </div>
     <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">כל הנתונים יסונכרנו אוטומטית עם גיליון Google Sheets פרטי שלך</div>
     <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
@@ -1640,8 +1640,11 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.019';
+const APP_VERSION   = '01.01.022';
 const CHANGELOG = [
+  { v: '01.01.022', date: '2026-05-06', notes: ['תיקון מסך הגדרות: גלילה מלאה, אין חיתוך תוכן', 'כפתור Google גמיש לכל רוחב מסך'] },
+  { v: '01.01.021', date: '2026-05-06', notes: ['כפתור "בחר מאנשי קשר" מוצג תמיד', 'אם האפליקציה לא מותקנת כ-PWA — הנחיה ברורה כיצד להתקין', 'אם הדפדפן לא תומך כלל — הפניה לייבוא VCF'] },
+  { v: '01.01.020', date: '2026-05-06', notes: ['תיקון זיהוי Contacts API ב-iOS — כפתור "בחר מאנשי קשר" מוצג כעת גם באייפון'] },
   { v: '01.01.019', date: '2026-05-06', notes: ['מסך קבלת פנים למשתמש חדש — חיבור Google Sheets עם יצירת בסיס נתונים אישי', 'אפשרות "המשך ללא ענן" לשמירה מקומית בלבד', 'מוצג פעם אחת בלבד לאחר מסך הפתיחה'] },
   { v: '01.01.018', date: '2026-05-06', notes: ['כפתור ייבוא אנשי קשר מהטלפון נוסף למסך הגדרות', 'תמיכה ב-iPhone וב-Android (native picker)', 'תיקון טקסט: הצגת iPhone / Android'] },
   { v: '01.01.017', date: '2026-05-06', notes: ['ייבוא גיבוי מקומי מסנכרן אוטומטית ל-Google Sheets אם מחובר'] },
@@ -4150,7 +4153,7 @@ function fmt(n) {
 
 // ─── Import Contacts ─────────────────────────────────────────────────────────
 let pendingImports = [];
-const hasNativePicker = () => 'contacts' in navigator && 'ContactsManager' in window;
+const hasNativePicker = () => 'contacts' in navigator && typeof navigator.contacts?.select === 'function';
 
 // Called from settings — closes settings panel first, then opens import drawer
 function importContactsFromSettings() {
@@ -4159,43 +4162,65 @@ function importContactsFromSettings() {
 }
 
 function importContacts() {
-  // Show method-choice screen inside the drawer
   document.getElementById('import-drawer-title').textContent = 'ייבוא אנשי קשר';
   document.getElementById('import-confirm-btn').style.display = 'none';
 
-  let html = `<p style="font-size:0.88rem;color:var(--gray-4);margin-bottom:16px;line-height:1.6">
-    בחר כיצד לייבא:</p>`;
+  // Native picker — always shown; handled gracefully if API unavailable
+  const nativeBtn = `
+    <button class="import-method-btn" onclick="importNative()">
+      <span style="font-size:1.8rem">📱</span>
+      <div>
+        <div style="font-weight:700">בחר מאנשי קשר</div>
+        <div style="font-size:0.78rem;color:var(--gray-3)">בחירה ישירות מספר הטלפון</div>
+      </div>
+    </button>`;
 
-  if (hasNativePicker()) {
-    html += `
-      <button class="import-method-btn" onclick="importNative()">
-        <span style="font-size:1.8rem">📱</span>
-        <div>
-          <div style="font-weight:700">בחר מאנשי קשר</div>
-          <div style="font-size:0.78rem;color:var(--gray-3)">ישירות מספר הטלפון (iPhone / Android)</div>
-        </div>
-      </button>`;
-  }
-
-  html += `
+  const vcfBtn = `
     <button class="import-method-btn" onclick="document.getElementById('vcf-file-input').click()">
       <span style="font-size:1.8rem">📄</span>
       <div>
         <div style="font-weight:700">ייבא קובץ .vcf</div>
         <div style="font-size:0.78rem;color:var(--gray-3)">iPhone / Android / מחשב</div>
       </div>
-    </button>
+    </button>`;
+
+  const vcfHelp = `
     <div style="margin-top:14px;padding:12px;background:var(--green-pale);border-radius:10px;font-size:0.8rem;color:var(--green-dark);line-height:1.7">
       <strong>כיצד לייצא מאייפון?</strong><br>
       אפליקציית Contacts ← בחר איש קשר ← Share Contact ← שמור כ-vcf<br>
-      לכל אנשי הקשר: Settings ← [שם] ← iCloud ← Export All Contacts
+      לכל אנשי הקשר: Settings ← [שמך] ← iCloud ← Export All Contacts
     </div>`;
+
+  const html = `<p style="font-size:0.88rem;color:var(--gray-4);margin-bottom:16px;line-height:1.6">בחר כיצד לייבא:</p>
+    ${nativeBtn}${vcfBtn}${vcfHelp}`;
 
   document.getElementById('import-body').innerHTML = html;
   openOverlay('overlay-import');
 }
 
 async function importNative() {
+  // Check API availability at runtime and show helpful message if unavailable
+  if (!hasNativePicker()) {
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (!isPWA) {
+      document.getElementById('import-body').innerHTML = `
+        <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:12px;padding:16px;font-size:0.85rem;line-height:1.8;color:#6d4c00">
+          <div style="font-weight:700;margin-bottom:8px">📲 נדרשת התקנה כ-PWA</div>
+          כדי לבחור אנשי קשר ישירות מהטלפון, יש להתקין את האפליקציה על מסך הבית:<br><br>
+          <strong>iPhone:</strong> Safari → כפתור שיתוף ↑ → "הוסף למסך הבית"<br>
+          <strong>Android:</strong> Chrome → תפריט ⋮ → "הוסף למסך הבית"<br><br>
+          לאחר ההתקנה, פתח מהמסך הראשי ונסה שוב.<br><br>
+          <button onclick="importContacts()" class="btn btn-secondary" style="width:100%">← חזור לאפשרויות</button>
+        </div>`;
+      return;
+    }
+    document.getElementById('import-body').innerHTML = `
+      <div style="background:#fce4ec;border-radius:12px;padding:16px;font-size:0.85rem;color:#880e4f">
+        הדפדפן שלך אינו תומך בבחירת אנשי קשר — השתמש בייבוא קובץ .vcf במקום.<br><br>
+        <button onclick="importContacts()" class="btn btn-secondary" style="width:100%">← חזור</button>
+      </div>`;
+    return;
+  }
   try {
     const available = await navigator.contacts.getProperties();
     const toRequest = ['name','tel','address','email'].filter(p => available.includes(p));
