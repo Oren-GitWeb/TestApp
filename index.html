@@ -1640,8 +1640,15 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.023';
+const APP_VERSION   = '01.01.024';
 const CHANGELOG = [
+  { v: '01.01.024', date: '2026-05-06', notes: [
+    'ניתוח תאריך קולי מקיף: היום, אתמול, מחר, שלשום, מחרותיים',
+    'ביטויי זמן יחסי: עוד X ימים/שבועות/חודשים, לפני X ימים/שבועות/חודשים',
+    'קיצורים: יומיים, שבועיים, שבוע הבא/שעבר, חודש הבא/שעבר, שנה הבאה/שעברה',
+    'מיקום בלוח: סוף/תחילת/אמצע חודש, סוף/תחילת שבוע',
+    'יום בשבוע עם מגדיר: ביום חמישי הקרוב/שעבר/הבא',
+  ]},
   { v: '01.01.023', date: '2026-05-06', notes: [
     'ניתוח קולי: פאנל תצוגה מקדימה לפני מילוי הטופס — מציג לקוח/תאריך/חיוב/הוצאות/הערות',
     'לקוח שנמצא מוצג בירוק ✓, לקוח חדש מוצג בכתום',
@@ -3301,83 +3308,126 @@ function parseItemizedAmount(text) {
 function parseDateFromSegment(seg, baseDate) {
   const s = seg.trim();
   const today = baseDate || new Date();
-  const toISO = d => d.toISOString().substring(0,10);
+  const toISO  = d => d.toISOString().substring(0,10);
+  const addD   = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+  const addM   = (d,n) => { const r=new Date(d); r.setMonth(r.getMonth()+n); return r; };
+  const addY   = (d,n) => { const r=new Date(d); r.setFullYear(r.getFullYear()+n); return r; };
+  const resN   = w => parseInt(w) || HE_NUMS[w] || 1;
 
-  // ── Relative ──────────────────────────────────────────────────────────────────
-  if (/היום/.test(s))  return toISO(today);
-  if (/אתמול/.test(s)) { const d=new Date(today); d.setDate(d.getDate()-1); return toISO(d); }
-  if (/שלשום/.test(s)) { const d=new Date(today); d.setDate(d.getDate()-2); return toISO(d); }
+  // ── 1. ביטויים יחסיים פשוטים ─────────────────────────────────────────────────
+  if (/היום/.test(s))                    return toISO(today);
+  if (/מחרותיים|מחרתיים/.test(s))        return toISO(addD(today,  2));
+  if (/מחר/.test(s))                     return toISO(addD(today,  1));
+  if (/שלשום/.test(s))                   return toISO(addD(today, -2));
+  if (/אתמול/.test(s))                   return toISO(addD(today, -1));
 
-  // ── "בעוד X ימים/שבועות/חודשים" ──────────────────────────────────────────────
-  const futureMatch = s.match(/בעוד\s+(\d+|אחד|שניים|שלושה|ארבעה|חמישה|שישה|שבעה|שמונה|תשעה|עשרה|אחת|שתיים|שלש|ארבע|חמש|שש|שבע|תשע|עשר)\s*(ימים?|שבועות?|חודשים?)/);
-  if (futureMatch) {
-    const n = parseInt(futureMatch[1]) || HE_NUMS[futureMatch[1]] || 1;
-    const unit = futureMatch[2];
-    const d = new Date(today);
-    if (/יום|ימים/.test(unit))         d.setDate(d.getDate() + n);
-    else if (/שבוע|שבועות/.test(unit)) d.setDate(d.getDate() + n*7);
-    else if (/חודש|חודשים/.test(unit)) d.setMonth(d.getMonth() + n);
+  // ── 2. "עוד X" / "בעוד X" ── ימים / שבועות / חודשים / שנים ──────────────────
+  const _qty = '\\d+|אחד|שניים|שלושה|ארבעה|חמישה|שישה|שבעה|שמונה|תשעה|עשרה|אחת|שתיים|שלש|ארבע|חמש|שש|שבע|תשע|עשר|אחד-עשר|שניים-עשר|שלושה-עשר|ארבעה-עשר|חמישה-עשר';
+  const futM = s.match(new RegExp(`(?:בעוד|עוד)\\s+(${_qty})\\s*(ימים?|שבועות?|חודשים?|שנים?)`));
+  if (futM) {
+    const n=resN(futM[1]), u=futM[2];
+    if (/יום|ימים/.test(u))    return toISO(addD(today, n));
+    if (/שבוע|שבועות/.test(u)) return toISO(addD(today, n*7));
+    if (/חודש|חודשים/.test(u)) return toISO(addM(today, n));
+    if (/שנה|שנים/.test(u))    return toISO(addY(today, n));
+  }
+
+  // ── 3. "לפני X" ── ימים / שבועות / חודשים / שנים ────────────────────────────
+  const pastM = s.match(new RegExp(`לפני\\s+(${_qty})\\s*(ימים?|שבועות?|חודשים?|שנים?)`));
+  if (pastM) {
+    const n=resN(pastM[1]), u=pastM[2];
+    if (/יום|ימים/.test(u))    return toISO(addD(today, -n));
+    if (/שבוע|שבועות/.test(u)) return toISO(addD(today, -n*7));
+    if (/חודש|חודשים/.test(u)) return toISO(addM(today, -n));
+    if (/שנה|שנים/.test(u))    return toISO(addY(today, -n));
+  }
+
+  // ── 4. ביטויי קיצור ───────────────────────────────────────────────────────────
+  // יומיים קדימה
+  if (/(?:עוד\s+)?יומיים/.test(s))                      return toISO(addD(today,  2));
+  // שבועיים / לפני שבועיים
+  if (/לפני\s+שבועיים/.test(s))                          return toISO(addD(today,-14));
+  if (/שבועיים/.test(s))                                  return toISO(addD(today, 14));
+  // שבוע הבא / שעבר / לפני שבוע
+  if (/(?:בשבוע\s+)?הבא|שבוע\s+הבא/.test(s) && /שבוע/.test(s)) return toISO(addD(today,  7));
+  if (/שבוע\s+שעבר|בשבוע\s+שעבר|לפני\s+שבוע/.test(s))  return toISO(addD(today, -7));
+  // חודש הבא / שעבר / לפני חודש
+  if (/חודש\s+הבא|בחודש\s+הבא/.test(s))                 return toISO(addM(today,  1));
+  if (/חודש\s+שעבר|בחודש\s+שעבר|לפני\s+חודש/.test(s))  return toISO(addM(today, -1));
+  // שנה הבאה / שעברה
+  if (/שנה\s+הבאה|בשנה\s+הבאה/.test(s))                 return toISO(addY(today,  1));
+  if (/שנה\s+שעברה|בשנה\s+שעברה/.test(s))               return toISO(addY(today, -1));
+
+  // ── 5. סוף / תחילת / אמצע חודש ──────────────────────────────────────────────
+  if (/סוף\s+(?:ה)?חודש|בסוף\s+(?:ה)?חודש/.test(s))
+    return toISO(new Date(today.getFullYear(), today.getMonth()+1, 0));
+  if (/(?:תחילת|ראשית)\s+(?:ה)?חודש/.test(s))
+    return toISO(new Date(today.getFullYear(), today.getMonth(), 1));
+  if (/אמצע\s+(?:ה)?חודש/.test(s))
+    return toISO(new Date(today.getFullYear(), today.getMonth(), 15));
+
+  // ── 6. סוף / תחילת שבוע ──────────────────────────────────────────────────────
+  // בסוף השבוע = שישי; תחילת השבוע = ראשון (ישראל)
+  if (/(?:ב)?סוף\s+(?:ה)?שבוע/.test(s)) {
+    const d=new Date(today), diff=(5-d.getDay()+7)%7||7; d.setDate(d.getDate()+diff); return toISO(d);
+  }
+  if (/(?:ב)?תחילת\s+(?:ה)?שבוע/.test(s)) {
+    const d=new Date(today), diff=(0-d.getDay()+7)%7||7; d.setDate(d.getDate()+diff); return toISO(d);
+  }
+
+  // ── 7. יום בשבוע + הקרוב / הבא / שעבר / bare ────────────────────────────────
+  // "ביום חמישי הקרוב" / "בחמישי" / "ביום שישי שעבר"
+  const _dn = 'ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת';
+  const dayRx = new RegExp(`(?:ביום\\s+|ב)(${_dn})(?:\\s+(הקרוב|הבא|שעבר|האחרון))?`);
+  const dayM  = s.match(dayRx);
+  if (dayM) {
+    const target = HE_DAY_NAMES[dayM[1]];
+    const q      = dayM[2];
+    const d      = new Date(today);
+    const cur    = d.getDay();
+    if (q === 'הקרוב' || q === 'הבא') {
+      let diff = target - cur; if (diff <= 0) diff += 7; d.setDate(d.getDate()+diff);
+    } else if (q === 'שעבר' || q === 'האחרון') {
+      let diff = cur - target; if (diff <= 0) diff += 7; d.setDate(d.getDate()-diff);
+    } else {
+      // bare → past occurrence (visit context)
+      let diff = cur - target; if (diff <= 0) diff += 7; d.setDate(d.getDate()-diff);
+    }
     return toISO(d);
   }
 
-  // ── "שבועיים" / "שבוע הבא" / "חודש הבא" ──────────────────────────────────────
-  if (/שבועיים/.test(s))               { const d=new Date(today); d.setDate(d.getDate()+14); return toISO(d); }
-  if (/שבוע\s+הבא/.test(s))            { const d=new Date(today); d.setDate(d.getDate()+7);  return toISO(d); }
-  if (/חודש\s+הבא|חודש הבא/.test(s))   { const d=new Date(today); d.setMonth(d.getMonth()+1); return toISO(d); }
-
-  // ── "ביום ראשון/שני/..." → last occurrence ────────────────────────────────────
-  const dayMatch = s.match(/ביום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/);
-  if (dayMatch) {
-    const target = HE_DAY_NAMES[dayMatch[1]];
-    const d = new Date(today);
-    let diff = d.getDay() - target;
-    if (diff <= 0) diff += 7;
-    d.setDate(d.getDate() - diff);
+  // ── 8. "ב-15 לאפריל" / "ב15 במאי" ───────────────────────────────────────────
+  const heMonM = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב["\-]?)?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)/);
+  if (heMonM) {
+    const day=parseInt(heMonM[1]), mon=HE_MONTHS[heMonM[2]]-1, yr=today.getFullYear();
+    const d=new Date(yr,mon,day);
+    if (d<today) d.setFullYear(yr+1);
     return toISO(d);
   }
 
-  // ── "ב-15 לאפריל" / "ב15 באפריל" ────────────────────────────────────────────
-  const heMonthMatch = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב["\-]?)?(ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר)/);
-  if (heMonthMatch) {
-    const day = parseInt(heMonthMatch[1]);
-    const mon = HE_MONTHS[heMonthMatch[2]] - 1;
-    const yr  = today.getFullYear();
-    const d   = new Date(yr, mon, day);
-    if (d < today) d.setFullYear(yr+1);
+  // ── 9. אורדינל + חודש ─────────────────────────────────────────────────────────
+  // "השלישי לחמישי" / "שלישי לחמישי" / "בעשירי למאי" / "העשירי ליוני"
+  const _mN  = 'ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר';
+  const _mON = 'ראשון|שני|שלישי|רביעי|חמישי|שישי|שביעי|שמיני|תשיעי|עשירי';
+  const _bOK = Object.keys(HE_BARE_ORDINALS).sort((a,b)=>b.length-a.length).join('|');
+  const ordM = s.match(new RegExp(`(?:[הב])?(${_bOK})\\s+(?:ל|ב(?!רחוב|כתובת|שכונת|דרך|גן\\b))(${_mN}|${_mON})`));
+  if (ordM) {
+    const day=HE_BARE_ORDINALS[ordM[1]], monW=ordM[2];
+    const mon=(HE_MONTHS[monW]||HE_MONTH_ORDINALS[monW]||1)-1, yr=today.getFullYear();
+    const d=new Date(yr,mon,day);
+    if (d<today) d.setFullYear(yr+1);
     return toISO(d);
   }
 
-  // ── Ordinal day + month ───────────────────────────────────────────────────────
-  // Handles ALL forms: "השלישי לחמישי" / "שלישי לחמישי" / "בעשירי למאי" / "העשירי ליוני"
-  // Optional ה or ב prefix before bare ordinal word, then ל/ב + month name or month ordinal
-  const _mNames    = 'ינואר|פברואר|מרץ|מרס|אפריל|מאי|יוני|יולי|אוגוסט|ספטמבר|אוקטובר|נובמבר|דצמבר';
-  const _mOrdNames = 'ראשון|שני|שלישי|רביעי|חמישי|שישי|שביעי|שמיני|תשיעי|עשירי';
-  const _bareOrdKeys = Object.keys(HE_BARE_ORDINALS).sort((a,b)=>b.length-a.length).join('|');
-  // (?:[הב])? captures optional definite/preposition prefix; bare ordinal key is captured in group 1
-  const ordMonthRx = new RegExp(`(?:[הב])?(${_bareOrdKeys})\\s+(?:ל|ב(?!רחוב|כתובת|שכונת|דרך|גן\\b))(${_mNames}|${_mOrdNames})`);
-  const ordMonthMatch = s.match(ordMonthRx);
-  if (ordMonthMatch) {
-    const day    = HE_BARE_ORDINALS[ordMonthMatch[1]];
-    const monWord = ordMonthMatch[2];
-    const mon = (HE_MONTHS[monWord] || HE_MONTH_ORDINALS[monWord] || 1) - 1;
-    const yr  = today.getFullYear();
-    const d   = new Date(yr, mon, day);
-    if (d < today) d.setFullYear(yr+1);
-    return toISO(d);
-  }
+  // ── 10. "ב-15 לחודש" ─────────────────────────────────────────────────────────
+  const domM = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב)חודש/);
+  if (domM) { const d=new Date(today); d.setDate(parseInt(domM[1])); return toISO(d); }
 
-  // ── "ב-15 לחודש" / "ב-15 בחודש" ─────────────────────────────────────────────
-  const dayOfMonthMatch = s.match(/ב["\-]?(\d{1,2})\s+(?:ל|ב)חודש/);
-  if (dayOfMonthMatch) {
-    const d = new Date(today); d.setDate(parseInt(dayOfMonthMatch[1]));
-    return toISO(d);
-  }
-
-  // ── Numeric: "15/4", "15.4.2026", "15-4" ─────────────────────────────────────
-  const numMatch = s.match(/(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/);
-  if (numMatch) {
-    const day = parseInt(numMatch[1]), mon = parseInt(numMatch[2])-1;
-    const yr  = numMatch[3] ? (numMatch[3].length===2 ? 2000+parseInt(numMatch[3]) : parseInt(numMatch[3])) : today.getFullYear();
+  // ── 11. מספרי: "15/4", "15.4.2026", "15-4-26" ────────────────────────────────
+  const numM = s.match(/(\d{1,2})[\/\-\.](\d{1,2})(?:[\/\-\.](\d{2,4}))?/);
+  if (numM) {
+    const day=parseInt(numM[1]), mon=parseInt(numM[2])-1;
+    const yr = numM[3] ? (numM[3].length===2 ? 2000+parseInt(numM[3]) : parseInt(numM[3])) : today.getFullYear();
     return toISO(new Date(yr, mon, day));
   }
 
