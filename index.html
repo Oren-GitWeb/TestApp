@@ -1640,8 +1640,13 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.024';
+const APP_VERSION   = '01.01.025';
 const CHANGELOG = [
+  { v: '01.01.025', date: '2026-05-07', notes: [
+    'הקלטת פגישה: פתיחה ישירה של טופס הפגישה — ללא מסך ביניים',
+    'הטקסט המוקלט נשמר אוטומטית בשדה פירוט האירוע',
+    'אין שדות חובה — ניתן לשמור פגישה בכל מצב, תאריך ברירת מחדל: היום',
+  ]},
   { v: '01.01.024', date: '2026-05-06', notes: [
     'ניתוח תאריך קולי מקיף: היום, אתמול, מחר, שלשום, מחרותיים',
     'ביטויי זמן יחסי: עוד X ימים/שבועות/חודשים, לפני X ימים/שבועות/חודשים',
@@ -1984,12 +1989,10 @@ document.getElementById('v-customer').addEventListener('change', function() {
 
 function saveVisit() {
   const customerId = document.getElementById('v-customer').value;
-  const date = document.getElementById('v-date').value;
   const revenue = document.getElementById('v-revenue').value;
-  if (!customerId || !date || !revenue) {
-    alert('יש למלא לקוח, תאריך וסכום לחיוב');
-    return;
-  }
+  // Default to today if no date entered
+  const date = document.getElementById('v-date').value || new Date().toISOString().slice(0,10);
+  document.getElementById('v-date').value = date;
   const id = document.getElementById('v-id').value || uid();
   const existing = visits.findIndex(v => v.id === id);
   const record = {
@@ -3640,52 +3643,11 @@ function analyzeAndFillVisit() {
     willCreateNew   = res.isNew;
   }
 
-  // ── Build preview panel ───────────────────────────────────────────────────────
-  const fmt2 = n => n != null ? '₪' + Number(n).toLocaleString('he-IL') : null;
-  const row  = (icon, label, val, color) => val
-    ? `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;border-bottom:1px solid #f0f0f0">
-         <span style="width:22px;text-align:center;flex-shrink:0">${icon}</span>
-         <span style="font-size:0.75rem;color:var(--gray-3);min-width:60px">${label}</span>
-         <span style="font-size:0.85rem;font-weight:600;color:${color||'var(--text)'};flex:1;text-align:right">${val}</span>
-       </div>` : '';
-
-  let custRow;
-  if (!parsed.customerName) {
-    custRow = row('👤','לקוח','לא זוהה ⚠️','var(--orange)');
-  } else if (matchedCustomer) {
-    custRow = row('👤','לקוח',`${matchedCustomer.name} ✓`,'var(--green-dark)');
-  } else {
-    custRow = row('👤','לקוח',`${parsed.customerName} (לקוח חדש)`,'var(--orange)');
-  }
-
-  const previewRows = [
-    custRow,
-    row('📅','תאריך', parsed.date ? parsed.date.split('-').reverse().join('/') : null),
-    row('💰','לחיוב',  fmt2(parsed.revenue)),
-    row('💸','הוצאות', fmt2(parsed.expenses)),
-    row('⏱','שעות',   parsed.hours != null ? parsed.hours + ' שע\'' : null),
-    row('📝','הערות',  parsed.notes ? parsed.notes.substring(0,80) + (parsed.notes.length>80?'…':'') : null),
-    row('📅','ביקור הבא', parsed.nextDate ? parsed.nextDate.split('-').reverse().join('/') : null),
-  ].filter(Boolean).join('');
-
-  const warnEl = document.getElementById('vv-warnings');
-  warnEl.style.display = '';
-  warnEl.innerHTML = `
-    <div style="background:#f8fdf8;border:1px solid var(--green-light);border-radius:10px;padding:10px 12px;margin-bottom:6px">
-      <div style="font-size:0.78rem;font-weight:700;color:var(--green-dark);margin-bottom:6px">🔍 סיכום ניתוח — בדוק לפני אישור:</div>
-      ${previewRows || '<div style="color:var(--gray-3);font-size:0.8rem">לא נמצא מידע</div>'}
-    </div>
-    ${parsed.warnings.length ? `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 12px;font-size:0.78rem;color:#6d4c00">⚠️ ${parsed.warnings.join(' | ')}</div>` : ''}`;
-
-  // ── Confirm button → fill form ────────────────────────────────────────────────
-  const analyzeBtn = document.getElementById('vv-analyze-btn');
-  if (analyzeBtn) {
-    analyzeBtn.textContent = '✅ אשר ומלא טופס';
-    analyzeBtn.onclick = () => _confirmAndFill(parsed, matchedCustomer, willCreateNew);
-  }
+  // ── Open form immediately with all parsed data ────────────────────────────────
+  _confirmAndFill(parsed, matchedCustomer, willCreateNew, text);
 }
 
-function _confirmAndFill(parsed, matchedCustomer, willCreateNew) {
+function _confirmAndFill(parsed, matchedCustomer, willCreateNew, rawText) {
   // ── Resolve customer ID ───────────────────────────────────────────────────────
   let customerId = '';
   if (matchedCustomer) {
@@ -3719,23 +3681,11 @@ function _confirmAndFill(parsed, matchedCustomer, willCreateNew) {
   if (parsed.collected !== null) document.getElementById('v-collected').value  = parsed.collected;
   if (parsed.expenses !== null)  document.getElementById('v-expenses').value   = parsed.expenses;
   if (parsed.hours    !== null)  document.getElementById('v-hours').value      = parsed.hours;
-  if (parsed.notes)              document.getElementById('v-notes').value      = parsed.notes;
   if (parsed.nextDate)           document.getElementById('v-next-date').value  = parsed.nextDate;
   if (parsed.nextNotes)          document.getElementById('v-next-notes').value = parsed.nextNotes;
 
-  // Show warning banner in form if customer missing
-  if (parsed.warnings.length) {
-    setTimeout(() => {
-      const drawerBody = document.querySelector('#overlay-visit .drawer-body');
-      const existing   = document.getElementById('vv-form-warn');
-      if (existing) existing.remove();
-      const div = document.createElement('div');
-      div.id = 'vv-form-warn';
-      div.style.cssText = 'background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:10px 12px;font-size:0.82rem;color:#6d4c00;margin-bottom:12px';
-      div.innerHTML = '<b>⚠️ ' + parsed.warnings.join(' | ') + '</b>';
-      drawerBody.insertBefore(div, drawerBody.firstChild);
-    }, 150);
-  }
+  // ── Raw transcript → notes field (full context always preserved) ──────────────
+  document.getElementById('v-notes').value = rawText || parsed.notes || '';
 }
 
 // ─── Import Visits ────────────────────────────────────────────────────────────
