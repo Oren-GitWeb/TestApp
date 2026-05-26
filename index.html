@@ -1640,8 +1640,12 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.025';
+const APP_VERSION   = '01.01.026';
 const CHANGELOG = [
+  { v: '01.01.026', date: '2026-05-07', notes: [
+    'תיקון iOS: בקשת הרשאת מיקרופון פעם אחת בלבד — ה-stream נשמר פתוח',
+    'כל כפתורי ההקלטה (פגישה, שדות טופס) משתמשים באותה הרשאה שכבר ניתנה',
+  ]},
   { v: '01.01.025', date: '2026-05-07', notes: [
     'הקלטת פגישה: פתיחה ישירה של טופס הפגישה — ללא מסך ביניים',
     'הטקסט המוקלט נשמר אוטומטית בשדה פירוט האירוע',
@@ -3212,7 +3216,7 @@ function closeVoiceVisitModal() {
   document.getElementById('popup-voice-visit').style.display = 'none';
 }
 
-function toggleVVRecording() {
+async function toggleVVRecording() {
   if (_vvRecording) {
     if (_vvRecognition) _vvRecognition.stop();
     return;
@@ -3222,6 +3226,16 @@ function toggleVVRecording() {
     document.getElementById('vv-status').textContent = '⚠️ הדפדפן אינו תומך בזיהוי קול — הקלד/י ישירות בתיבה';
     return;
   }
+
+  // ── Pre-warm mic permission once so iOS won't re-prompt on each recording ─────
+  document.getElementById('vv-status').textContent = '⏳ מבקש הרשאת מיקרופון…';
+  const permitted = await _ensureMicPermission();
+  if (!permitted) {
+    document.getElementById('vv-status').textContent = '';
+    alert('🎤 גישה למיקרופון נדחתה\n\nכיצד לאפשר:\n• iPhone: הגדרות ← Safari ← מיקרופון ← אפשר\n• Chrome: לחץ על סמל המנעול בשורת הכתובת ← מיקרופון ← אפשר');
+    return;
+  }
+
   const rec = new SR();
   rec.lang = 'he-IL';
   rec.continuous = true;
@@ -4470,6 +4484,7 @@ let recognition = null;
 let isRecording = false;
 let isNextRecording = false;
 let nextRecognition = null;
+let _micPermissionStream = null; // kept alive so iOS doesn't re-prompt
 
 function toggleRecording() {
   if (isRecording) stopRecording(); else startRecording('v-notes', 'mic-btn', 'mic-label', 'mic-status');
@@ -4478,21 +4493,46 @@ function toggleNextRecording() {
   if (isNextRecording) stopNextRecording(); else startRecording('v-next-notes', 'mic-next-btn', 'mic-next-label', 'mic-next-status', true);
 }
 
-function startRecording(textareaId, btnId, labelId, statusId, isNext) {
+// ── Pre-warm microphone permission once and keep stream alive (iOS fix) ────────
+async function _ensureMicPermission() {
+  if (_micPermissionStream) return true; // already granted
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true; // fallback: no getUserMedia, let SpeechRecognition handle it
+  try {
+    _micPermissionStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    // Keep stream alive but mute it — iOS sees mic as "in use" and won't re-prompt
+    _micPermissionStream.getAudioTracks().forEach(t => { t.enabled = false; });
+    return true;
+  } catch (err) {
+    _micPermissionStream = null;
+    return false; // permission denied — let onerror handle messaging
+  }
+}
+
+async function startRecording(textareaId, btnId, labelId, statusId, isNext) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     showMicStatusById(statusId, 'הדפדפן לא תומך בזיהוי קול — השתמש ב-Chrome', true);
     return;
   }
 
-  const rec = new SpeechRecognition();
-  if (isNext) { isNextRecording = true; nextRecognition = rec; }
-  else         { isRecording = true;     recognition = rec; }
-
   const btn = document.getElementById(btnId);
   btn.classList.add('recording');
   document.getElementById(labelId).textContent = 'ממתין…';
   showMicStatusById(statusId, '⏳ מבקש הרשאת מיקרופון…');
+
+  // ── Request mic permission once; keep stream open so iOS won't re-prompt ──────
+  const permitted = await _ensureMicPermission();
+  if (!permitted) {
+    btn.classList.remove('recording');
+    document.getElementById(labelId).textContent = 'הקלט';
+    alert('🎤 גישה למיקרופון נדחתה\n\nכיצד לאפשר:\n• iPhone: הגדרות ← Safari ← מיקרופון ← אפשר\n• Chrome: לחץ על סמל המנעול בשורת הכתובת ← מיקרופון ← אפשר');
+    hideMicStatusById(statusId);
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  if (isNext) { isNextRecording = true; nextRecognition = rec; }
+  else         { isRecording = true;     recognition = rec; }
 
   rec.lang = 'he-IL';
   rec.continuous = true;
@@ -4526,7 +4566,7 @@ function startRecording(textareaId, btnId, labelId, statusId, isNext) {
     if (isNext) stopNextRecording(); else stopRecording();
     const msgs = {
       'not-allowed':
-        '🎤 גישה למיקרופון נדחתה\n\nכיצד לאפשר:\n• Chrome: לחץ על סמל המנעול בשורת הכתובת ← מיקרופון ← אפשר\n• iPhone: הגדרות ← Safari ← מיקרופון ← אפשר',
+        '🎤 גישה למיקרופון נדחתה\n\nכיצד לאפשר:\n• iPhone: הגדרות ← Safari ← מיקרופון ← אפשר\n• Chrome: לחץ על סמל המנעול בשורת הכתובת ← מיקרופון ← אפשר',
       'no-speech':          null,
       'network':            '⚠️ זיהוי קול דורש חיבור לאינטרנט.',
       'audio-capture':      '⚠️ לא נמצא מיקרופון במכשיר.',
