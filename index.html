@@ -841,6 +841,41 @@
     <div id="customers-list"></div>
   </div>
 
+  <!-- SCREEN: Purchases -->
+  <div class="screen" id="screen-purchases">
+    <!-- search + filters -->
+    <div style="margin-bottom:8px">
+      <div class="search-wrap" style="margin-bottom:6px">
+        <input type="text" id="purchases-search" placeholder="חיפוש בפריטים שנרכשו…" oninput="renderPurchases()" />
+        <span class="search-icon">🔍</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:stretch;margin-bottom:6px">
+        <!-- vendor autocomplete filter -->
+        <div style="position:relative">
+          <input type="text" id="pf-vendor" autocomplete="off" placeholder="סנן לפי ספק…"
+            style="width:100%;padding:9px 10px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:0.82rem;font-family:inherit;direction:rtl;box-sizing:border-box;background:var(--white);color:var(--text)"
+            oninput="_pvSearch(this.value)"
+            onfocus="_pvOpen()"
+            onblur="setTimeout(_pvBlur,200)" />
+          <div id="pf-vendor-dd"
+            style="display:none;position:absolute;top:100%;right:0;left:0;z-index:300;background:#fff;border:1.5px solid var(--green-light);border-top:none;border-radius:0 0 10px 10px;max-height:200px;overflow-y:auto;box-shadow:0 6px 18px rgba(0,0,0,0.13)"></div>
+        </div>
+        <!-- date range -->
+        <div style="display:flex;gap:4px;align-items:center">
+          <input type="date" id="pf-date-from" onchange="renderPurchases()"
+            style="flex:1;min-width:0;padding:8px 6px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:0.78rem;font-family:inherit;background:var(--white);color:var(--text);direction:ltr" />
+          <span style="font-size:0.75rem;color:var(--gray-3);flex-shrink:0">—</span>
+          <input type="date" id="pf-date-to" onchange="renderPurchases()"
+            style="flex:1;min-width:0;padding:8px 6px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:0.78rem;font-family:inherit;background:var(--white);color:var(--text);direction:ltr" />
+        </div>
+        <button onclick="clearPurchaseFilters()" title="איפוס פילטרים"
+          style="padding:0 12px;border:1.5px solid var(--gray-2);border-radius:8px;background:var(--gray-1);color:var(--gray-4);font-size:1rem;cursor:pointer;white-space:nowrap;height:100%">🗑</button>
+      </div>
+    </div>
+    <div id="purchases-summary" style="background:var(--green-pale);border-radius:12px;padding:10px 14px;margin-bottom:12px;display:none"></div>
+    <div id="purchases-list"></div>
+  </div>
+
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" data-screen="visits" onclick="navigate('visits')">
@@ -848,6 +883,9 @@
     </button>
     <button class="nav-btn" data-screen="calendar" onclick="navigate('calendar')">
       <span class="icon">📅</span>לוח שנה
+    </button>
+    <button class="nav-btn" data-screen="purchases" onclick="navigate('purchases')">
+      <span class="icon">🛒</span>רכש
     </button>
     <button class="nav-btn" id="nav-reports-btn" onclick="openReport()">
       <span class="icon">📊</span>דוחות
@@ -871,6 +909,47 @@
   </button>
 </div>
 
+<!-- ═══ DRAWER: Purchase Form ═══ -->
+<div class="overlay" id="overlay-purchase">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title" id="purchase-drawer-title">רכישה חדשה</div>
+    <div class="drawer-body">
+      <input type="hidden" id="p-id" />
+      <div class="form-group">
+        <label>תיאור פריטים שנרכשו</label>
+        <textarea id="p-desc" placeholder="פרט את הפריטים שנרכשו…" style="min-height:80px;resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label>שם העסק / ספק</label>
+        <div style="position:relative">
+          <input type="text" id="p-vendor" autocomplete="off" placeholder="שם החנות או הספק"
+            style="width:100%;box-sizing:border-box"
+            oninput="_pfvSearch(this.value)"
+            onfocus="_pfvOpen()"
+            onblur="setTimeout(_pfvBlur,200)" />
+          <div id="p-vendor-dd"
+            style="display:none;position:absolute;top:100%;right:0;left:0;z-index:400;background:#fff;border:1.5px solid var(--green-light);border-top:none;border-radius:0 0 10px 10px;max-height:180px;overflow-y:auto;box-shadow:0 6px 18px rgba(0,0,0,0.13)"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>תאריך רכישה</label>
+          <input type="date" id="p-date" />
+        </div>
+        <div class="form-group">
+          <label>סכום (₪)</label>
+          <input type="number" id="p-amount" placeholder="0" min="0" step="0.01" />
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-secondary" style="flex:1" onclick="closeOverlay('overlay-purchase')">ביטול</button>
+        <button class="btn btn-primary" style="flex:1" onclick="savePurchase()">💾 שמור רכישה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ DRAWER: Visit Form ═══ -->
 <div class="overlay" id="overlay-visit">
   <div class="drawer">
@@ -881,9 +960,16 @@
       <div class="form-group">
         <label>לקוח *</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <select id="v-customer" style="flex:1">
-            <option value="">— בחר לקוח —</option>
-          </select>
+          <div style="flex:1;position:relative">
+            <input type="hidden" id="v-customer" />
+            <input type="text" id="v-customer-search" autocomplete="off" placeholder="הקלד שם לקוח לחיפוש…"
+              style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-2);border-radius:8px;font-size:0.95rem;font-family:inherit;direction:rtl;box-sizing:border-box"
+              oninput="_vcSearch(this.value)"
+              onfocus="_vcSearch(this.value)"
+              onblur="setTimeout(_vcBlur,200)" />
+            <div id="v-customer-dropdown"
+              style="display:none;position:absolute;top:100%;right:0;left:0;z-index:300;background:#fff;border:1.5px solid var(--green-light);border-top:none;border-radius:0 0 10px 10px;max-height:220px;overflow-y:auto;box-shadow:0 6px 18px rgba(0,0,0,0.13)"></div>
+          </div>
           <button type="button" onclick="openQuickCustomer()" title="הוסף לקוח חדש" style="flex-shrink:0;background:var(--green-pale);border:1.5px solid var(--green-light);color:var(--green-dark);border-radius:50%;width:36px;height:36px;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">+</button>
         </div>
       </div>
@@ -1107,7 +1193,12 @@
       <span id="gs-status" style="font-size:0.82rem;font-weight:600;flex:1;min-width:80px">⚪ לא מחובר</span>
       <button id="gs-signin-btn" onclick="gsSignIn()" class="btn btn-primary" style="flex:0 0 auto;font-size:0.78rem;padding:7px 10px;white-space:nowrap">🔗 התחבר עם Google</button>
     </div>
-    <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:16px">כל הנתונים יסונכרנו אוטומטית עם גיליון Google Sheets פרטי שלך</div>
+    <div style="font-size:0.72rem;color:var(--gray-3);margin-bottom:10px">כל הנתונים יסונכרנו אוטומטית עם גיליון Google Sheets פרטי שלך</div>
+    <div id="gs-merge-btns">
+      <button onclick="gsMergeSync('pull')" class="btn btn-secondary" style="width:100%;margin-bottom:6px">⬇️ Google Sheets → מכשיר זה (מיזוג)</button>
+      <button onclick="gsMergeSync('push')" class="btn btn-secondary" style="width:100%;margin-bottom:6px">⬆️ מכשיר זה → Google Sheets (מיזוג)</button>
+      <div style="font-size:0.7rem;color:var(--gray-3);margin-bottom:10px">מיזוג חכם — רשומה חדשה יותר תנצח, כפילות מדויקת תידלג</div>
+    </div>
     <hr style="border:none;border-top:1px solid var(--gray-2);margin-bottom:16px" />
 
     <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:8px;font-weight:600">גיבוי נתונים</div>
@@ -1219,6 +1310,16 @@
 </div>
 
 <!-- ═══ POPUP: Quick Add Customer ═══ -->
+<!-- ═══ POPUP: Sync Summary ═══ -->
+<div id="popup-sync-summary" style="display:none;position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,0.28)">
+    <div style="font-size:1.1rem;font-weight:700;color:var(--green-dark);margin-bottom:4px" id="ss-title">סיכום סנכרון</div>
+    <div style="font-size:0.8rem;color:var(--gray-3);margin-bottom:18px" id="ss-subtitle"></div>
+    <div id="ss-body" style="margin-bottom:20px"></div>
+    <button onclick="document.getElementById('popup-sync-summary').style.display='none'" class="btn btn-primary" style="width:100%">סגור</button>
+  </div>
+</div>
+
 <div id="popup-quick-customer" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.45);align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.25)">
     <div style="font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--green-dark)">➕ לקוח חדש מהיר</div>
@@ -1640,8 +1741,19 @@
 
 <script>
 // ─── Storage ───────────────────────────────────────────────────────────────
-const APP_VERSION   = '01.01.026';
+const APP_VERSION   = '01.01.035';
 const CHANGELOG = [
+  { v: '01.01.028', date: '2026-05-07', notes: [
+    'מסך רכש חדש: רשימת הוצאות רכש מסודרת כרונולוגית',
+    'הזנת רכישה: תיאור פריטים, שם ספק, תאריך, סכום',
+    'עריכה ומחיקה ישירות מהמסך הראשי של רכש',
+    'אייקון 🛒 רכש בתפריט הניווט — בין לוח שנה לדוחות',
+    'סיכום סה"כ הוצאות רכש בראש המסך',
+  ]},
+  { v: '01.01.027', date: '2026-05-07', notes: [
+    'בחירת לקוח בטופס פגישה: שדה חיפוש עם autocomplete — רשימה מסוננת תוך כדי הקלדה',
+    'תוצאות מתחילות בשם מוצגות ראשון, לאחר מכן תוצאות המכילות את הטקסט',
+  ]},
   { v: '01.01.026', date: '2026-05-07', notes: [
     'תיקון iOS: בקשת הרשאת מיקרופון פעם אחת בלבד — ה-stream נשמר פתוח',
     'כל כפתורי ההקלטה (פגישה, שדות טופס) משתמשים באותה הרשאה שכבר ניתנה',
@@ -1696,6 +1808,7 @@ const CHANGELOG = [
 ];
 const VISITS_KEY    = 'gardenapp_visits';
 const CUSTOMERS_KEY = 'gardenapp_customers';
+const PURCHASES_KEY = 'gardenapp_purchases';
 const META_KEY      = 'gardenapp_meta';
 
 // ── Bump this number whenever the data structure changes ──────────────────────
@@ -1714,6 +1827,7 @@ function save(key, data) {
 
 let visits    = load(VISITS_KEY);
 let customers = load(CUSTOMERS_KEY);
+let purchases = load(PURCHASES_KEY);
 
 // ─── Local DB migration ──────────────────────────────────────────────────────
 // Each entry: { version: N, up: fn(visits, customers) → { visits, customers } }
@@ -1811,6 +1925,14 @@ function navigate(screen) {
     document.getElementById('fab-icon').textContent = '📋';
     fab.style.display = '';
     renderCalendar();
+  } else if (screen === 'purchases') {
+    topbar.textContent = 'רכש';
+    document.getElementById('topbar-action').style.display = 'none';
+    fabLabel.textContent = 'רכישה חדשה';
+    document.getElementById('fab-icon').textContent = '🛒';
+    fab.style.display = '';
+    _purchaseDateDefaults();
+    renderPurchases();
   } else {
     topbar.textContent = 'לקוחות';
     fabLabel.textContent = 'לקוח חדש';
@@ -1828,7 +1950,11 @@ document.getElementById('fab-btn').addEventListener('click', () => {
   if (currentScreen === 'visits' || currentScreen === 'calendar') {
     const prefill = (currentScreen === 'calendar' && calSelection) ? calSelection : null;
     openVisitForm(null, prefill);
-  } else openCustomerForm();
+  } else if (currentScreen === 'purchases') {
+    openPurchaseForm();
+  } else {
+    openCustomerForm();
+  }
 });
 
 // ─── Overlay helpers ─────────────────────────────────────────────────────────
@@ -1918,18 +2044,11 @@ function openWazeAddress(addr) {
 }
 
 function openVisitForm(visitId, prefill) {
-  // populate customer dropdown
-  const sel = document.getElementById('v-customer');
-  sel.innerHTML = '<option value="">— בחר לקוח —</option>';
-  customers.sort((a,b) => a.name.localeCompare(b.name,'he')).forEach(c => {
-    sel.innerHTML += `<option value="${c.id}">${c.name}</option>`;
-  });
-
   if (visitId) {
     const v = visits.find(x => x.id === visitId);
     document.getElementById('visit-drawer-title').textContent = 'עריכת ביקור';
     document.getElementById('v-id').value = v.id;
-    document.getElementById('v-customer').value = v.customerId || '';
+    _vcSet(v.customerId || '');
     document.getElementById('v-date').value = v.date;
     document.getElementById('v-start-time').value = v.startTime || (currentScreen === 'calendar' ? '08:00' : '');
     document.getElementById('v-address').value = v.address || '';
@@ -1950,7 +2069,7 @@ function openVisitForm(visitId, prefill) {
   } else {
     document.getElementById('visit-drawer-title').textContent = 'ביקור חדש';
     document.getElementById('v-id').value = '';
-    document.getElementById('v-customer').value = '';
+    _vcSet('');
     document.getElementById('v-date').value = prefill ? prefill.date : new Date().toISOString().split('T')[0];
     document.getElementById('v-start-time').value = prefill ? (prefill.startTime || '') : '';
     document.getElementById('v-address').value = '';
@@ -1985,7 +2104,58 @@ function clearVisitFields() {
   updateProfitPreview();
 }
 
-// auto-fill address when customer selected
+// ─── Customer autocomplete search ─────────────────────────────────────────────
+function _vcSearch(q) {
+  const dd = document.getElementById('v-customer-dropdown');
+  const norm = q.trim();
+  const list = norm.length === 0
+    ? [...customers].sort((a,b) => a.name.localeCompare(b.name,'he'))
+    : (() => {
+        const lo = norm.toLowerCase();
+        const starts = customers.filter(c => c.name.toLowerCase().startsWith(lo));
+        const contains = customers.filter(c => !c.name.toLowerCase().startsWith(lo) && c.name.toLowerCase().includes(lo));
+        return [...starts, ...contains].sort((a,b) => a.name.localeCompare(b.name,'he'));
+      })();
+
+  if (list.length === 0) {
+    dd.style.display = 'none';
+    return;
+  }
+  dd.innerHTML = list.map(c => {
+    const hi = norm.length ? c.name.replace(new RegExp('('+norm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'), '<b>$1</b>') : escHtml(c.name);
+    return `<div data-id="${c.id}" data-name="${escHtml(c.name)}"
+      style="padding:9px 13px;cursor:pointer;font-size:0.93rem;direction:rtl;border-bottom:1px solid #f0f4f0"
+      onmousedown="_vcSelect('${c.id}',this.dataset.name)"
+      onmouseover="this.style.background='var(--green-pale)'"
+      onmouseout="this.style.background=''">${hi}</div>`;
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function _vcSelect(id, name) {
+  document.getElementById('v-customer').value = id;
+  document.getElementById('v-customer-search').value = name;
+  document.getElementById('v-customer-dropdown').style.display = 'none';
+  // auto-fill address
+  const c = customers.find(x => x.id === id);
+  if (c && c.address) document.getElementById('v-address').value = c.address;
+  // keep change event working for other listeners
+  document.getElementById('v-customer').dispatchEvent(new Event('change'));
+}
+
+function _vcBlur() {
+  // if no customer is selected and text doesn't match anything, keep text but clear hidden id
+  const dd = document.getElementById('v-customer-dropdown');
+  dd.style.display = 'none';
+}
+
+function _vcSet(id) {
+  const c = customers.find(x => x.id === id);
+  document.getElementById('v-customer').value = id || '';
+  document.getElementById('v-customer-search').value = c ? c.name : '';
+}
+
+// auto-fill address when customer changed programmatically
 document.getElementById('v-customer').addEventListener('change', function() {
   const c = customers.find(x => x.id === this.value);
   if (c && c.address) document.getElementById('v-address').value = c.address;
@@ -2284,15 +2454,9 @@ function saveQuickCustomer() {
 }
 
 function populateVisitCustomers(selectId) {
-  const sel = document.getElementById('v-customer');
-  const current = selectId || sel.value;
-  sel.innerHTML = '<option value="">— בחר לקוח —</option>' +
-    [...customers].sort((a,b) => a.name.localeCompare(b.name,'he'))
-      .map(c => `<option value="${c.id}"${c.id === current ? ' selected' : ''}>${escHtml(c.name)}</option>`)
-      .join('');
+  const id = selectId || document.getElementById('v-customer').value;
+  _vcSet(id);
   if (selectId) {
-    sel.value = selectId;
-    // auto-fill address
     const c = customers.find(x => x.id === selectId);
     if (c && c.address) document.getElementById('v-address').value = c.address;
   }
@@ -3683,11 +3847,7 @@ function _confirmAndFill(parsed, matchedCustomer, willCreateNew, rawText) {
   closeVoiceVisitModal();
   openVisitForm();
 
-  if (customerId) {
-    const sel = document.getElementById('v-customer');
-    sel.value = customerId;
-    sel.dispatchEvent(new Event('change'));
-  }
+  if (customerId) _vcSet(customerId);
   if (parsed.address)            document.getElementById('v-address').value    = parsed.address;
   if (parsed.date)               document.getElementById('v-date').value       = parsed.date;
   if (parsed.startTime)          document.getElementById('v-start-time').value = parsed.startTime;
@@ -3700,6 +3860,202 @@ function _confirmAndFill(parsed, matchedCustomer, willCreateNew, rawText) {
 
   // ── Raw transcript → notes field (full context always preserved) ──────────────
   document.getElementById('v-notes').value = rawText || parsed.notes || '';
+}
+
+// ─── Purchases ────────────────────────────────────────────────────────────────
+function renderPurchases() {
+  const list    = document.getElementById('purchases-list');
+  const sumEl   = document.getElementById('purchases-summary');
+  const qEl     = document.getElementById('purchases-search');
+  const vendEl  = document.getElementById('pf-vendor');
+
+  // ── Vendor filter ─────────────────────────────────────────────────────────────
+  const curVendor = (vendEl ? vendEl.value.trim() : '');
+  vendEl.style.borderColor = curVendor ? 'var(--green-light)' : '';
+  vendEl.style.background  = curVendor ? 'var(--green-pale)'  : '';
+  vendEl.style.color       = curVendor ? 'var(--green-dark)'  : '';
+
+  // ── Date range filter ─────────────────────────────────────────────────────────
+  const dateFrom = document.getElementById('pf-date-from').value;
+  const dateTo   = document.getElementById('pf-date-to').value;
+  const _styleDate = (el, active) => {
+    el.style.borderColor = active ? 'var(--green-light)' : '';
+    el.style.background  = active ? 'var(--green-pale)'  : '';
+  };
+  _styleDate(document.getElementById('pf-date-from'), !!dateFrom);
+  _styleDate(document.getElementById('pf-date-to'),   !!dateTo);
+
+  // ── Apply filters ─────────────────────────────────────────────────────────────
+  const q = (qEl ? qEl.value : '').trim().toLowerCase();
+  const filtered = purchases.filter(p => {
+    if (curVendor && p.vendor !== curVendor) return false;
+    if (dateFrom  && (p.date || '') < dateFrom) return false;
+    if (dateTo    && (p.date || '') > dateTo)   return false;
+    if (q && !(p.desc || '').toLowerCase().includes(q) && !(p.vendor || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.created - a.created);
+
+  // ── Summary bar (shows filtered total) ───────────────────────────────────────
+  const isFiltered = q || curVendor || dateFrom || dateTo;
+  const total = filtered.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const grandTotal = purchases.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  if (purchases.length) {
+    sumEl.style.display = '';
+    const filteredNote = isFiltered ? ` (מתוך ₪${grandTotal.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2})} סה"כ)` : '';
+    sumEl.innerHTML = `<span style="font-size:0.82rem;color:var(--green-dark)">סה"כ הוצאות רכש: <b>₪${total.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>${filteredNote} &nbsp;|&nbsp; ${filtered.length} רשומות</span>`
+      + (isFiltered ? ` <button onclick="clearPurchaseFilters()" style="margin-right:8px;font-size:0.75rem;border:none;background:none;color:var(--green-dark);cursor:pointer;text-decoration:underline">נקה פילטרים</button>` : '');
+  } else {
+    sumEl.style.display = 'none';
+  }
+
+  if (!sorted.length) {
+    list.innerHTML = purchases.length
+      ? `<div style="text-align:center;color:var(--gray-3);padding:40px 20px;font-size:0.9rem">לא נמצאו רשומות התואמות לסינון</div>`
+      : `<div style="text-align:center;color:var(--gray-3);padding:48px 20px;font-size:0.95rem">אין רשומות רכש עדיין<br><span style="font-size:0.8rem">לחץ על 🛒 רכישה חדשה להוספה</span></div>`;
+    return;
+  }
+
+  list.innerHTML = sorted.map(p => {
+    const dateStr = p.date ? p.date.split('-').reverse().join('/') : '—';
+    const amtStr  = p.amount != null && p.amount !== '' ? '₪' + parseFloat(p.amount).toLocaleString('he-IL', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
+    return `
+    <div style="background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,0.08);padding:14px 16px;margin-bottom:10px;direction:rtl">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.82rem;color:var(--gray-3);margin-bottom:3px">${dateStr}${p.vendor ? ' · <b>' + escHtml(p.vendor) + '</b>' : ''}</div>
+          <div style="font-size:0.93rem;font-weight:600;color:var(--text);line-height:1.4;word-break:break-word">${escHtml(p.desc || '—')}</div>
+        </div>
+        <div style="text-align:left;flex-shrink:0">
+          <div style="font-size:1.05rem;font-weight:700;color:var(--green-dark)">${amtStr}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+        <button onclick="openPurchaseForm('${p.id}')"
+          style="font-size:0.8rem;padding:5px 14px;border-radius:8px;border:1.5px solid var(--green-light);background:var(--green-pale);color:var(--green-dark);cursor:pointer;font-family:inherit">✏️ ערוך</button>
+        <button onclick="deletePurchase('${p.id}')"
+          style="font-size:0.8rem;padding:5px 14px;border-radius:8px;border:1.5px solid #fca5a5;background:#fff5f5;color:#b91c1c;cursor:pointer;font-family:inherit">🗑 מחק</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openPurchaseForm(purchaseId) {
+  const title = document.getElementById('purchase-drawer-title');
+  if (purchaseId) {
+    const p = purchases.find(x => x.id === purchaseId);
+    if (!p) return;
+    title.textContent = 'עריכת רכישה';
+    document.getElementById('p-id').value     = p.id;
+    document.getElementById('p-desc').value   = p.desc   || '';
+    document.getElementById('p-vendor').value = p.vendor || '';
+    document.getElementById('p-date').value   = p.date   || '';
+    document.getElementById('p-amount').value = p.amount != null ? p.amount : '';
+  } else {
+    title.textContent = 'רכישה חדשה';
+    document.getElementById('p-id').value     = '';
+    document.getElementById('p-desc').value   = '';
+    document.getElementById('p-vendor').value = '';
+    document.getElementById('p-date').value   = new Date().toISOString().slice(0,10);
+    document.getElementById('p-amount').value = '';
+  }
+  openOverlay('overlay-purchase');
+}
+
+function savePurchase() {
+  const id     = document.getElementById('p-id').value || uid();
+  const desc   = document.getElementById('p-desc').value.trim();
+  const vendor = document.getElementById('p-vendor').value.trim();
+  const date   = document.getElementById('p-date').value || new Date().toISOString().slice(0,10);
+  const amount = document.getElementById('p-amount').value;
+
+  const record = { id, desc, vendor, date, amount: amount !== '' ? parseFloat(amount) : null, created: Date.now(), updated: Date.now() };
+  const idx = purchases.findIndex(x => x.id === id);
+  if (idx >= 0) { record.created = purchases[idx].created; purchases[idx] = record; }
+  else purchases.unshift(record);
+
+  save(PURCHASES_KEY, purchases);
+  closeOverlay('overlay-purchase');
+  renderPurchases();
+}
+
+// ── Vendor autocomplete for purchase FORM ────────────────────────────────────
+function _pfvSearch(q) {
+  const dd   = document.getElementById('p-vendor-dd');
+  const norm = (q || '').trim().toLowerCase();
+  const all  = _pvVendors();
+  const list = norm
+    ? [...all.filter(v => v.toLowerCase().startsWith(norm)), ...all.filter(v => !v.toLowerCase().startsWith(norm) && v.toLowerCase().includes(norm))]
+    : all;
+  if (!list.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = list.map(v => {
+    const hi = norm ? v.replace(new RegExp('('+norm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<b>$1</b>') : escHtml(v);
+    return `<div onmousedown="_pfvSelect('${escHtml(v).replace(/'/g,"\\'")}')"
+      style="padding:9px 13px;cursor:pointer;font-size:0.9rem;direction:rtl;border-bottom:1px solid #f0f4f0"
+      onmouseover="this.style.background='var(--green-pale)'"
+      onmouseout="this.style.background=''">${hi}</div>`;
+  }).join('');
+  dd.style.display = 'block';
+}
+function _pfvOpen()    { _pfvSearch(document.getElementById('p-vendor').value); }
+function _pfvBlur()    { document.getElementById('p-vendor-dd').style.display = 'none'; }
+function _pfvSelect(v) {
+  document.getElementById('p-vendor').value = v;
+  document.getElementById('p-vendor-dd').style.display = 'none';
+}
+
+// ── Vendor autocomplete for purchase filter ───────────────────────────────────
+function _pvVendors() {
+  return [...new Set(purchases.map(p => p.vendor || '').filter(Boolean))].sort((a,b) => a.localeCompare(b,'he'));
+}
+function _pvRenderDd(q) {
+  const dd   = document.getElementById('pf-vendor-dd');
+  const norm = (q || '').trim().toLowerCase();
+  const all  = _pvVendors();
+  const list = norm
+    ? [...all.filter(v => v.toLowerCase().startsWith(norm)), ...all.filter(v => !v.toLowerCase().startsWith(norm) && v.toLowerCase().includes(norm))]
+    : all;
+  if (!list.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = list.map(v => {
+    const hi = norm ? v.replace(new RegExp('('+norm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<b>$1</b>') : escHtml(v);
+    return `<div onmousedown="_pvSelect('${escHtml(v).replace(/'/g,"\\'")}')"
+      style="padding:8px 12px;cursor:pointer;font-size:0.85rem;direction:rtl;border-bottom:1px solid #f0f4f0"
+      onmouseover="this.style.background='var(--green-pale)'"
+      onmouseout="this.style.background=''">${hi}</div>`;
+  }).join('');
+  dd.style.display = 'block';
+}
+function _pvSearch(q) { _pvRenderDd(q); renderPurchases(); }
+function _pvOpen()    { _pvRenderDd(document.getElementById('pf-vendor').value); }
+function _pvBlur()    { document.getElementById('pf-vendor-dd').style.display = 'none'; }
+function _pvSelect(v) {
+  document.getElementById('pf-vendor').value = v;
+  document.getElementById('pf-vendor-dd').style.display = 'none';
+  renderPurchases();
+}
+
+function _purchaseDateDefaults() {
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const mm    = String(today.getMonth() + 1).padStart(2, '0');
+  const dd    = String(today.getDate()).padStart(2, '0');
+  document.getElementById('pf-date-from').value = `${yyyy}-${mm}-01`;
+  document.getElementById('pf-date-to').value   = `${yyyy}-${mm}-${dd}`;
+}
+
+function clearPurchaseFilters() {
+  document.getElementById('purchases-search').value = '';
+  document.getElementById('pf-vendor').value = '';
+  _purchaseDateDefaults();
+  renderPurchases();
+}
+
+function deletePurchase(id) {
+  if (!confirm('למחוק רשומת רכש זו?')) return;
+  purchases = purchases.filter(p => p.id !== id);
+  save(PURCHASES_KEY, purchases);
+  renderPurchases();
 }
 
 // ─── Import Visits ────────────────────────────────────────────────────────────
@@ -4674,6 +5030,7 @@ const GS_SS_KEY    = 'gs_spreadsheet_id';
 
 const VISIT_COLS    = ['id','customerId','date','startTime','address','revenue','collected','expenses','hours','notes','nextDate','nextNotes','status','createdAt'];
 const CUSTOMER_COLS = ['id','name','address','phone','contact','notes','visitType','interval','createdAt'];
+const PURCHASE_COLS = ['id','desc','vendor','date','amount','created','updated'];
 
 let gsTokenClient  = null;
 let gsAccessToken  = null;
@@ -4862,6 +5219,7 @@ async function gsEnsureSpreadsheet() {
   const colLetter = n => String.fromCharCode(64 + n);
   await gsSheets('PUT', `/${ssId}/values/ביקורים!A1:${colLetter(VISIT_COLS.length)}1?valueInputOption=RAW`,    { values: [VISIT_COLS] });
   await gsSheets('PUT', `/${ssId}/values/לקוחות!A1:${colLetter(CUSTOMER_COLS.length)}1?valueInputOption=RAW`, { values: [CUSTOMER_COLS] });
+  await gsSheets('PUT', `/${ssId}/values/רכש!A1:${colLetter(PURCHASE_COLS.length)}1?valueInputOption=RAW`,    { values: [PURCHASE_COLS] });
   return ssId;
 }
 
@@ -4876,10 +5234,12 @@ async function gsPushToSheets() {
 
   const vRows = [VISIT_COLS,    ...visits.map(v   => VISIT_COLS.map(k    => v[k]    ?? ''))];
   const cRows = [CUSTOMER_COLS, ...customers.map(c => CUSTOMER_COLS.map(k => c[k] ?? ''))];
+  const pRows = [PURCHASE_COLS, ...purchases.map(p => PURCHASE_COLS.map(k => p[k] ?? ''))];
 
-  const [rv, rc] = await Promise.all([
+  const [rv, rc, rp] = await Promise.all([
     gsSheets('PUT', `/${ssId}/values/ביקורים!A1:${colLetter(VISIT_COLS.length)}${vRows.length}?valueInputOption=RAW`,    { values: vRows }),
-    gsSheets('PUT', `/${ssId}/values/לקוחות!A1:${colLetter(CUSTOMER_COLS.length)}${cRows.length}?valueInputOption=RAW`,  { values: cRows })
+    gsSheets('PUT', `/${ssId}/values/לקוחות!A1:${colLetter(CUSTOMER_COLS.length)}${cRows.length}?valueInputOption=RAW`,  { values: cRows }),
+    gsSheets('PUT', `/${ssId}/values/רכש!A1:${colLetter(PURCHASE_COLS.length)}${pRows.length}?valueInputOption=RAW`,      { values: pRows })
   ]);
 
   // clear rows below current data (in case rows were deleted)
@@ -4887,9 +5247,11 @@ async function gsPushToSheets() {
     await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`ביקורים!A${vRows.length+1}:Z10000`] });
   if (cRows.length > 1)
     await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`לקוחות!A${cRows.length+1}:Z10000`] });
+  if (pRows.length > 1)
+    await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`רכש!A${pRows.length+1}:Z10000`] });
 
   gsSyncing = false;
-  gsShowSyncIcon(rv && rc ? '☁️' : '⚠️', 3000);
+  gsShowSyncIcon(rv && rc && rp ? '☁️' : '⚠️', 3000);
 }
 
 // ── Pull all data from Sheets ────────────────────────────────────────────────
@@ -4934,6 +5296,144 @@ async function gsPullFromSheets() {
   if (changed) { renderVisits(); renderCustomers(); }
   gsShowSyncIcon('☁️', 3000);
   gsShowSyncIcon('☁️✓', 3000);
+}
+
+// ─── Smart Merge Sync ────────────────────────────────────────────────────────
+// Merges two arrays of records by id. Newer `updated` wins; exact same `updated` = skip.
+// Returns { records, added, updated, skipped, localNewer }
+function _mergeRecordSets(local, remote, tsKey = 'updated') {
+  const result = local.map(r => ({ ...r }));
+  let added = 0, updated = 0, skipped = 0, localNewer = 0;
+  for (const rem of remote) {
+    const idx = result.findIndex(l => l.id === rem.id);
+    if (idx === -1) {
+      result.push({ ...rem });
+      added++;
+    } else {
+      const lTs = Number(result[idx][tsKey]) || 0;
+      const rTs = Number(rem[tsKey])         || 0;
+      if (lTs === rTs) { skipped++; }           // exact duplicate — ignore
+      else if (rTs > lTs) { result[idx] = { ...rem }; updated++; } // remote newer → take it
+      else { localNewer++; }                    // local newer → keep local
+    }
+  }
+  return { records: result, added, updated, skipped, localNewer };
+}
+
+// Read visits + customers rows from Sheets and parse into arrays
+async function _gsReadAllFromSheets() {
+  const ssId = localStorage.getItem(GS_SS_KEY);
+  if (!ssId) return null;
+  const [vr, cr, pr] = await Promise.all([
+    gsSheets('GET', `/${ssId}/values/ביקורים!A1:Z10000`),
+    gsSheets('GET', `/${ssId}/values/לקוחות!A1:Z10000`),
+    gsSheets('GET', `/${ssId}/values/רכש!A1:Z10000`)
+  ]);
+  const parseSheet = (res, numKeys) => {
+    if (!res?.values || res.values.length < 2) return [];
+    const hdr = res.values[0];
+    return res.values.slice(1).filter(r => r[0]).map(row => {
+      const obj = {};
+      hdr.forEach((k, i) => { obj[k] = row[i] ?? ''; });
+      (numKeys || []).forEach(k => { obj[k] = parseFloat(obj[k]) || 0; });
+      return obj;
+    });
+  };
+  return {
+    visits:    parseSheet(vr, ['revenue','collected','expenses','hours']),
+    customers: parseSheet(cr),
+    purchases: parseSheet(pr, ['amount'])
+  };
+}
+
+async function gsMergeSync(direction) {
+  if (!gsIsSignedIn()) {
+    alert('יש להתחבר ל-Google Sheets תחילה');
+    return;
+  }
+  await gsEnsureSpreadsheet();
+
+  closeSettings();
+  gsShowSyncIcon('⏳');
+
+  try {
+    const remote = await _gsReadAllFromSheets();
+    if (!remote) throw new Error('לא ניתן לקרוא נתונים מ-Google Sheets');
+
+    let vStats, cStats, pStats;
+
+    if (direction === 'pull') {
+      // Sheets → local: merge remote INTO local (remote wins if newer)
+      const vMerge = _mergeRecordSets(visits,    remote.visits,    'updated');
+      const cMerge = _mergeRecordSets(customers, remote.customers, 'updated');
+      const pMerge = _mergeRecordSets(purchases, remote.purchases, 'updated');
+      visits    = vMerge.records;
+      customers = cMerge.records;
+      purchases = pMerge.records;
+      save(VISITS_KEY,    visits);
+      save(CUSTOMERS_KEY, customers);
+      save(PURCHASES_KEY, purchases);
+      renderVisits(); renderCustomers();
+      if (currentScreen === 'purchases') renderPurchases();
+      vStats = vMerge; cStats = cMerge; pStats = pMerge;
+
+    } else {
+      // local → Sheets: merge local INTO remote (local wins if newer), then write to Sheets
+      const vMerge = _mergeRecordSets(remote.visits,    visits,    'updated');
+      const cMerge = _mergeRecordSets(remote.customers, customers, 'updated');
+      const pMerge = _mergeRecordSets(remote.purchases, purchases, 'updated');
+
+      // Write merged result to Sheets
+      const ssId = localStorage.getItem(GS_SS_KEY);
+      const col  = n => String.fromCharCode(64 + n);
+      const vRows = [VISIT_COLS,    ...vMerge.records.map(v => VISIT_COLS.map(k    => v[k]    ?? ''))];
+      const cRows = [CUSTOMER_COLS, ...cMerge.records.map(c => CUSTOMER_COLS.map(k => c[k] ?? ''))];
+      const pRows = [PURCHASE_COLS, ...pMerge.records.map(p => PURCHASE_COLS.map(k => p[k] ?? ''))];
+      await Promise.all([
+        gsSheets('PUT', `/${ssId}/values/ביקורים!A1:${col(VISIT_COLS.length)}${vRows.length}?valueInputOption=RAW`,    { values: vRows }),
+        gsSheets('PUT', `/${ssId}/values/לקוחות!A1:${col(CUSTOMER_COLS.length)}${cRows.length}?valueInputOption=RAW`,  { values: cRows }),
+        gsSheets('PUT', `/${ssId}/values/רכש!A1:${col(PURCHASE_COLS.length)}${pRows.length}?valueInputOption=RAW`,      { values: pRows })
+      ]);
+      // Clear stale rows
+      if (vRows.length > 1) await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`ביקורים!A${vRows.length+1}:Z10000`] });
+      if (cRows.length > 1) await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`לקוחות!A${cRows.length+1}:Z10000`] });
+      if (pRows.length > 1) await gsSheets('POST', `/${ssId}/values:batchClear`, { ranges: [`רכש!A${pRows.length+1}:Z10000`] });
+
+      vStats = vMerge; cStats = cMerge; pStats = pMerge;
+    }
+
+    gsShowSyncIcon('☁️✓', 3000);
+    _showSyncReport(direction, vStats, cStats, pStats);
+
+  } catch (err) {
+    gsShowSyncIcon('⚠️', 4000);
+    alert('שגיאה בסנכרון: ' + (err.message || err));
+  }
+}
+
+function _showSyncReport(direction, vStats, cStats, pStats) {
+  const dirLabel = direction === 'pull' ? 'Google Sheets → מכשיר זה' : 'מכשיר זה → Google Sheets';
+  const statRow  = (icon, label, n, color) => n > 0
+    ? `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;background:${color}15;margin-bottom:5px">
+         <span style="font-size:1rem">${icon}</span>
+         <span style="font-size:0.88rem;flex:1">${label}</span>
+         <span style="font-weight:700;font-size:0.95rem;color:${color}">${n}</span>
+       </div>` : '';
+
+  const section = (title, s) => `
+    <div style="font-size:0.78rem;font-weight:700;color:var(--gray-3);margin:10px 0 5px">${title}</div>
+    ${statRow('➕','נוספו',                       s.added,      '#16a34a')}
+    ${statRow('🔄','עודכנו (גרסה חדשה יותר)',     s.updated,    '#2563eb')}
+    ${statRow('⏭','דולגו (עדכניים יותר מקומית)', s.localNewer,'#7c3aed')}
+    ${statRow('✓', 'זהים לחלוטין (דולגו)',        s.skipped,    '#6b7280')}
+    ${!s.added && !s.updated && !s.localNewer && !s.skipped
+      ? '<div style="font-size:0.82rem;color:var(--gray-3);padding:5px 0">אין שינויים</div>' : ''}`;
+
+  document.getElementById('ss-title').textContent    = '✅ סנכרון הושלם';
+  document.getElementById('ss-subtitle').textContent = dirLabel;
+  document.getElementById('ss-body').innerHTML =
+    section('📋 ביקורים', vStats) + section('👥 לקוחות', cStats) + (pStats ? section('🛒 רכש', pStats) : '');
+  document.getElementById('popup-sync-summary').style.display = 'flex';
 }
 
 // ── Auto-push after every local save ────────────────────────────────────────
